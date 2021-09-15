@@ -62,7 +62,8 @@ def predict():
     #dir is your directory path as string
     test_data_generator = ImageDataGenerator(rescale=1./255)
     IMAGE_SIZE = 200
-    TEST_SIZE = len(next(os.walk(frames_folder))[2]) 
+    TEST_SIZE = len(next(os.walk(frames_folder + "/frames"))[2]) 
+    print("TEST SIZE: " + str(TEST_SIZE))
     IMAGE_WIDTH, IMAGE_HEIGHT = IMAGE_SIZE, IMAGE_SIZE
     test_generator = test_data_generator.flow_from_directory(
         frames_folder,
@@ -71,21 +72,21 @@ def predict():
         class_mode="binary", 
         shuffle=False)
     probabilities = model.predict_generator(test_generator, TEST_SIZE)
-
+    i = 0
     for index, probability in enumerate(probabilities):
         image_path = frames_folder + "/" + test_generator.filenames[index]
-        #img = mpimg.imread(image_path)
-        #plt.imshow(img)
+        i += 1
+        print("")
+        print("")
+        print("PHOTO NUMBER " + str(i))
+    
         if probability > 0.5:
             print(image_path)
             print("Probability: " + str(probability[0]*100) + " thumbnail")
-            #plt.title("%.2f" % (probability[0]*100) + "% dog")
         else:
             print(image_path)
             print("Probability: " + str((1-probability[0])*100) + " no-thumbnail")
-            #plt.title("%.2f" % ((1-probability[0])*100) + "% cat")
-        #plt.show()
-    
+
 
 
 if __name__ == "__main__":
