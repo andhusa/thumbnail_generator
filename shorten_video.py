@@ -4,6 +4,7 @@ from moviepy.editor import *
 from tensorflow import keras
 from keras.preprocessing.image import ImageDataGenerator
 import numpy as np
+import imutils
 
 folder_path = "../videoAndOutput/"
 model = keras.models.load_model(folder_path + 'models/thumbnail_vs_no_thumbnail.h5')
@@ -18,7 +19,7 @@ def main():
     cam = cv2.VideoCapture(video_path)
     
     try:
-        # creating a folder named data
+        # creating a folder for frames
 
         if not os.path.exists(frames_folder):
             os.makedirs(frames_folder)
@@ -27,10 +28,11 @@ def main():
     
     # if not created then raise error
     except OSError:
-        print ('Error: Creating directory of data')
+        print ('Error: Couldnt create directory')
     
     # frame
     currentframe = 0
+    # frames to skip
     frame_skip = 60
     while(True):
         # reading from frame
@@ -40,7 +42,7 @@ def main():
         if currentframe % frame_skip == 0:
             # if video is still left continue creating images
             name = frames_folder + '/frames/frame' + str(currentframe) + '.jpg'
-            print ('Creating...' + name)
+            print ('Creating: ' + name)
     
             # writing the extracted images
             cv2.imwrite(name, frame)
@@ -80,12 +82,21 @@ def predict():
         print("")
         print("PHOTO NUMBER " + str(i))
     
-        if probability > 0.5:
+        if probability > 0.75:
             print(image_path)
             print("Probability: " + str(probability[0]*100) + " thumbnail")
-            (mean, blurry) = detect_blur_fft(image_path)
+            img = cv2.imread(image_path)
+            img = imutils.resize(img, width=500)
+            gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+            print(gray.shape)
+            (mean, blurry) = detect_blur_fft(gray)
             print("mean: " + str(mean))
             print("blurry: " + str(blurry))
+        elif probability > 0.5:
+            print(image_path)
+            print("Not clear thumbnail")
+            print("Probability: " + str(probability[0]*100) + " thumbnail")
+            os.remove(image_path)
         else:
             print(image_path)
             print("Probability: " + str((1-probability[0])*100) + " no-thumbnail")
