@@ -3,7 +3,7 @@ import os
 from moviepy.editor import *
 from tensorflow import keras
 from keras.preprocessing.image import ImageDataGenerator
-
+import numpy as np
 
 folder_path = "../videoAndOutput/"
 model = keras.models.load_model(folder_path + 'models/thumbnail_vs_no_thumbnail.h5')
