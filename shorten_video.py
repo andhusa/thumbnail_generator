@@ -1,11 +1,13 @@
 import cv2
 import os
+import re
 from moviepy.editor import *
 from tensorflow import keras
 from keras.preprocessing.image import ImageDataGenerator
 import numpy as np
 import imutils
 from os.path import isfile, join
+
 
 folder_path = "../videoAndOutput/"
 model = keras.models.load_model(folder_path + 'models/thumbnail_vs_no_thumbnail.h5')
@@ -113,24 +115,28 @@ def predictAndRemove():
 def selectMean():
     regex = re.compile(r'\d+')
 
-    onlyfiles = [f for f in listdir(frames_folder + "/frames") if isfile(join(frames_folder + "/frames", f))]
+    onlyfiles = [f for f in os.listdir(frames_folder + "/frames") if isfile(join(frames_folder + "/frames", f))]
     print(onlyfiles)
     frames = []
     for i in onlyfiles:
         frameNum = regex.findall(i)
         for i in frameNum:
-            frames.append(frameNum)
+            frames.append(int(frameNum[0]))
 
     if len(frames) == 0:
         raise Exception("No framenumber in the filenames of the frame folder")
     totalFrameNum = 0
+    print(frames)
     for frame in frames:
         totalFrameNum += frame
-    meanFrame = totalFrameNum / len(frames)
-    closestToMean = min(frames, key=lambda x:abs(meanFrame))
+    meanFrame = int(totalFrameNum / len(frames))
+    print("meanframe: " + str(meanFrame))
+    takeClosest = lambda num,collection:min(collection,key=lambda x:abs(x-num))
+    closestToMean = takeClosest(meanFrame, frames)
+    print(closestToMean)
     finalFile = ""
     for file in onlyfiles:
-        if closestToMean in file:
+        if str(closestToMean) in file:
             finalFile = file
 
     return finalFile
