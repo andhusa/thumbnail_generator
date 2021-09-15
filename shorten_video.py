@@ -86,7 +86,7 @@ def predict():
         else:
             print(image_path)
             print("Probability: " + str((1-probability[0])*100) + " no-thumbnail")
-
+            os.remove(image_path)
 
 
 if __name__ == "__main__":
