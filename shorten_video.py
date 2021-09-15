@@ -82,7 +82,7 @@ def predict():
         #print("")
         #print("PHOTO NUMBER " + str(i))
     
-        if probability > 0.75:
+        if probability > 0.77:
             print(image_path)
             print("Probability: " + str(probability[0]*100) + " thumbnail")
             img = cv2.imread(image_path)
