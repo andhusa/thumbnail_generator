@@ -78,9 +78,9 @@ def predict():
     for index, probability in enumerate(probabilities):
         image_path = frames_folder + "/" + test_generator.filenames[index]
         i += 1
-        print("")
-        print("")
-        print("PHOTO NUMBER " + str(i))
+        #print("")
+        #print("")
+        #print("PHOTO NUMBER " + str(i))
     
         if probability > 0.75:
             print(image_path)
@@ -92,17 +92,19 @@ def predict():
             (mean, blurry) = detect_blur_fft(gray)
             print("mean: " + str(mean))
             print("blurry: " + str(blurry))
+            if blurry:
+                os.remove(image_path)
         elif probability > 0.5:
-            print(image_path)
-            print("Not clear thumbnail")
-            print("Probability: " + str(probability[0]*100) + " thumbnail")
+            #print(image_path)
+            #print("Not clear thumbnail")
+            #print("Probability: " + str(probability[0]*100) + " thumbnail")
             os.remove(image_path)
         else:
-            print(image_path)
-            print("Probability: " + str((1-probability[0])*100) + " no-thumbnail")
+            #print(image_path)
+            #print("Probability: " + str((1-probability[0])*100) + " no-thumbnail")
             os.remove(image_path)
 
-def detect_blur_fft(image, size=60, thresh=10, vis=False):
+def detect_blur_fft(image, size=60, thresh=5, vis=False):
 	# grab the dimensions of the image and use the dimensions to
 	# derive the center (x, y)-coordinates
 	(h, w) = image.shape
