@@ -5,6 +5,7 @@ from tensorflow import keras
 from keras.preprocessing.image import ImageDataGenerator
 import numpy as np
 import imutils
+from os.path import isfile, join
 
 folder_path = "../videoAndOutput/"
 model = keras.models.load_model(folder_path + 'models/thumbnail_vs_no_thumbnail.h5')
@@ -55,11 +56,13 @@ def main():
     cam.release()
     cv2.destroyAllWindows()
 
-    predict()
+    predictAndRemove()
+    fileName = selectMean()
+    print(fileName)
 
 
 
-def predict():
+def predictAndRemove():
     
     #dir is your directory path as string
     test_data_generator = ImageDataGenerator(rescale=1./255)
@@ -76,6 +79,9 @@ def predict():
     probabilities = model.predict_generator(test_generator, TEST_SIZE)
     i = 0
     for index, probability in enumerate(probabilities):
+        numfiles = len(next(os.walk(frames_folder + "/frames"))[2])
+        if( numfiles < 2):
+            break
         image_path = frames_folder + "/" + test_generator.filenames[index]
         i += 1
         #print("")
@@ -103,6 +109,33 @@ def predict():
             #print(image_path)
             #print("Probability: " + str((1-probability[0])*100) + " no-thumbnail")
             os.remove(image_path)
+
+def selectMean():
+    regex = re.compile(r'\d+')
+
+    onlyfiles = [f for f in listdir(frames_folder + "/frames") if isfile(join(frames_folder + "/frames", f))]
+    print(onlyfiles)
+    frames = []
+    for i in onlyfiles:
+        frameNum = regex.findall(i)
+        for i in frameNum:
+            frames.append(frameNum)
+
+    if len(frames) == 0:
+        raise Exception("No framenumber in the filenames of the frame folder")
+    totalFrameNum = 0
+    for frame in frames:
+        totalFrameNum += frame
+    meanFrame = totalFrameNum / len(frames)
+    closestToMean = min(frames, key=lambda x:abs(meanFrame))
+    finalFile = ""
+    for file in onlyfiles:
+        if closestToMean in file:
+            finalFile = file
+
+    return finalFile
+
+
 
 def detect_blur_fft(image, size=60, thresh=5, vis=False):
 	# grab the dimensions of the image and use the dimensions to
