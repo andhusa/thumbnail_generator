@@ -1,12 +1,12 @@
 import cv2
 import os
 from moviepy.editor import *
-#from tensorflow import keras
-#from keras.preprocessing.image import ImageDataGenerator
+from tensorflow import keras
+from keras.preprocessing.image import ImageDataGenerator
 
 
 folder_path = "../videoAndOutput/"
-#model = keras.models.load_model(folder_path + 'models/thumbnail_vs_no_thumbnail.h5')
+model = keras.models.load_model(folder_path + 'models/thumbnail_vs_no_thumbnail.h5')
 video_filename = "athc1dz9jiyfy.ts"
 video_path = folder_path + video_filename
 frames_folder = folder_path + video_filename.split(".")[0] + "_frames"
@@ -14,9 +14,6 @@ frames_folder = folder_path + video_filename.split(".")[0] + "_frames"
 def main():
     print("PREDICTING")
 
-    #clip = VideoFileClip(video_path)
-    #print(clip.duration)
-    #ffmpeg_extract_subclip(video_path, 0, 10, targetname= folder_path + "test.mp4")
     # Read the video from specified path
     cam = cv2.VideoCapture(video_path)
     
@@ -25,7 +22,8 @@ def main():
 
         if not os.path.exists(frames_folder):
             os.makedirs(frames_folder)
-            print("created folder: " + frames_folder)
+            os.makedirs(frames_folder + "/frames")
+            print("created folder: " + frames_folder + "/frames")
     
     # if not created then raise error
     except OSError:
@@ -41,7 +39,7 @@ def main():
             break
         if currentframe % frame_skip == 0:
             # if video is still left continue creating images
-            name = frames_folder + '/frame' + str(currentframe) + '.jpg'
+            name = frames_folder + '/frames/frame' + str(currentframe) + '.jpg'
             print ('Creating...' + name)
     
             # writing the extracted images
@@ -60,7 +58,7 @@ def main():
 
 
 def predict():
-    '''
+    
     #dir is your directory path as string
     test_data_generator = ImageDataGenerator(rescale=1./255)
     IMAGE_SIZE = 200
@@ -87,8 +85,7 @@ def predict():
             print("Probability: " + str((1-probability[0])*100) + " no-thumbnail")
             #plt.title("%.2f" % ((1-probability[0])*100) + "% cat")
         #plt.show()
-        '''
-    pass
+    
 
 
 if __name__ == "__main__":
