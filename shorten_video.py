@@ -9,11 +9,13 @@ import imutils
 from os.path import isfile, join
 import shutil
 
-folder_path = "/global/D1/projects/soccer_clipping/events-Eliteserien2019-minus15-pluss25/"
+folder_path = "/global/D1/projects/soccer_clipping/events-Allsvenskan2019-minus15-pluss25/"
+#folder_path = "/global/D1/projects/soccer_clipping/events-Eliteserien2019-minus15-pluss25/"
 #folder_path = "/home/andrehus/egne_prosjekter/videoAndOutput/"
 model = keras.models.load_model('/home/andrehus/egne_prosjekter/videoAndOutput/models/thumbnail_vs_no_thumbnail.h5')
+logo_detection_model = keras.models.load_model('/home/andrehus/egne_prosjekter/videoAndOutput/models/logo_detection/logo_detection.h5')
 thumbnail_output = folder_path + "/thumbnail_output/"
-num_videos = 50
+num_videos = 5
 
 def main():
     try:
@@ -53,7 +55,7 @@ def create_thumbnail(video_filename):
     # frame
     currentframe = 0
     # frames to skip
-    frame_skip = 60
+    frame_skip = 20
     while(True):
         # reading from frame
         ret,frame = cam.read()
@@ -62,7 +64,7 @@ def create_thumbnail(video_filename):
         if currentframe % frame_skip == 0:
             # if video is still left continue creating images
             name = frames_folder + '/frames/frame' + str(currentframe) + '.jpg'
-    
+            
             # writing the extracted images
             cv2.imwrite(name, frame)
     
@@ -73,21 +75,25 @@ def create_thumbnail(video_filename):
     # Release all space and windows once done
     cam.release()
     cv2.destroyAllWindows()
-
     priority_images = predictAndRemove(frames_folder)
     for priority in priority_images:
-        for image in priority:
-            print(image)
+        highestPri = 0
+        image = ""
+        for key in priority:
+            print(key)
+            if highestPri < priority[key]:
+                highestPri = priority[key]
+                image = key
+            
+        if image != "":
             newName = video_filename.split(".")[0] + "_thumbnail.jpg"
             shutil.copy(image, thumbnail_output + newName)
             try:
-                shutil.rmtree(frames_folder)
+                #shutil.rmtree(frames_folder)
+                pass
             except OSError as e:
                 print("Error: %s - %s." % (e.filename, e.strerror))
-            
             return
-    #fileName = selectMean()
-    #print(fileName)
 
 
 
@@ -105,91 +111,62 @@ def predictAndRemove(frames_folder):
         batch_size=1,
         class_mode="binary", 
         shuffle=False)
-    probabilities = model.predict_generator(test_generator, TEST_SIZE)
-    images_with_faces = []
-    priority_images = [[] for x in range(5)]
-    i = 0
-    for index, probability in enumerate(probabilities):
-        numfiles = len(next(os.walk(frames_folder + "/frames"))[2])
-        if( numfiles < 2):
-            break
+    logo_probabilities = logo_detection_model.predict_generator(test_generator, TEST_SIZE)
+    for index, probability in enumerate(logo_probabilities):
         image_path = frames_folder + "/" + test_generator.filenames[index]
-        i += 1
+        if probability > 0.5:
+            print(image_path)
+            print("LOGO")
+
+    probabilities = model.predict_generator(test_generator, TEST_SIZE)
+    priority_images = [{} for x in range(5)]
+
+    for index, probability in enumerate(probabilities):
+
+        image_path = frames_folder + "/" + test_generator.filenames[index]
+       
         #print("")
-        #print("")
-        #print("PHOTO NUMBER " + str(i))
+        #print(""))
+        print(image_path)
         
+        image = cv2.imread(image_path)
+        gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+        fm = cv2.Laplacian(gray, cv2.CV_64F).var()
+        print("Blur score: ")
+        print(fm)
+        if fm < 100:
+            print("____________")
+            print("BLURRY")
+            print("____________")
+        else:
+            print("NOT BLURRY")
         
-        if probability > 0.75:
+        if probability > 0.5:
             #print(image_path)
             #print("Probability: " + str(probability[0]*100) + " thumbnail")
             
             #print("Big face detected: " + str(detect_faces(image_path)))
             if not detect_faces(image_path):
                 #os.remove(image_path)
-                priority_images[2].append(image_path)
+                priority_images[1][image_path] = probability
             else:
-                priority_images[0].append(image_path)
-                images_with_faces.append(image_path)
+                priority_images[0][image_path] = probability
                 return priority_images
-
-        elif probability > 0.5:
-            #print(image_path)
-            #print("Not clear thumbnail")
-            #print("Probability: " + str(probability[0]*100) + " thumbnail")
-            #print("Big face detected: " + str(detect_faces(image_path)))
-            if not detect_faces(image_path):
-                #os.remove(image_path)
-                priority_images[3].append(image_path)
-            else:
-                priority_images[1].append(image_path)
-                images_with_faces.append(image_path)
         else:
             #print(image_path)
             #print("Probability: " + str((1-probability[0])*100) + " no-thumbnail")
             if not detect_faces(image_path):
-                os.remove(image_path)
+                pass
+                #os.remove(image_path)
             else:
-                images_with_faces.append(image_path)
-                priority_images[4].append(image_path)
+                priority_images[4][image_path] = probability
             
-    #print("images with faces:")
-    #for i in images_with_faces:
-    #    print(i)
 
     #print("priority_images:")
     #print(priority_images)
     return priority_images
 
 
-def selectMean():
-    regex = re.compile(r'\d+')
-
-    onlyfiles = [f for f in os.listdir(frames_folder + "/frames") if isfile(join(frames_folder + "/frames", f))]
-    print(onlyfiles)
-    frames = []
-    for i in onlyfiles:
-        frameNum = regex.findall(i)
-        for i in frameNum:
-            frames.append(int(frameNum[0]))
-
-    if len(frames) == 0:
-        raise Exception("No framenumber in the filenames of the frame folder")
-    totalFrameNum = 0
-    print(frames)
-    for frame in frames:
-        totalFrameNum += frame
-    meanFrame = int(totalFrameNum / len(frames))
-    print("meanframe: " + str(meanFrame))
-    takeClosest = lambda num,collection:min(collection,key=lambda x:abs(x-num))
-    closestToMean = takeClosest(meanFrame, frames)
-    print(closestToMean)
-    finalFile = ""
-    for file in onlyfiles:
-        if str(closestToMean) in file:
-            finalFile = file
-
-    return finalFile
 
 def detect_faces(image):
     # Load the cascade
@@ -202,6 +179,7 @@ def detect_faces(image):
     faces = face_cascade.detectMultiScale(gray, 1.1, 4)
 
     for (x, y, w, h) in faces:
+        #Want the size of face to be bigger than 80 pixels in at least one dimension
         if w > 80 or h > 80:
             return True
 
