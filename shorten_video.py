@@ -9,9 +9,9 @@ import imutils
 from os.path import isfile, join
 import shutil
 
-folder_path = "/global/D1/projects/soccer_clipping/events-Allsvenskan2019-minus15-pluss25/"
+#folder_path = "/global/D1/projects/soccer_clipping/events-Allsvenskan2019-minus15-pluss25/"
 #folder_path = "/global/D1/projects/soccer_clipping/events-Eliteserien2019-minus15-pluss25/"
-#folder_path = "/home/andrehus/egne_prosjekter/videoAndOutput/"
+folder_path = "/home/andrehus/egne_prosjekter/videoAndOutput/"
 model = keras.models.load_model('/home/andrehus/egne_prosjekter/videoAndOutput/models/thumbnail_vs_no_thumbnail.h5')
 logo_detection_model = keras.models.load_model('/home/andrehus/egne_prosjekter/videoAndOutput/models/logo_detection/logo_detection.h5')
 thumbnail_output = folder_path + "/thumbnail_output/"
@@ -148,10 +148,9 @@ def predictAndRemove(frames_folder):
             #print("Big face detected: " + str(detect_faces(image_path)))
             if not detect_faces(image_path):
                 #os.remove(image_path)
-                priority_images[1][image_path] = probability
+                priority_images[1][image_path] = probabbility
             else:
                 priority_images[0][image_path] = probability
-                return priority_images
         else:
             #print(image_path)
             #print("Probability: " + str((1-probability[0])*100) + " no-thumbnail")
@@ -159,7 +158,7 @@ def predictAndRemove(frames_folder):
                 pass
                 #os.remove(image_path)
             else:
-                priority_images[4][image_path] = probability
+                priority_images[2][image_path] = probability
             
 
     #print("priority_images:")
