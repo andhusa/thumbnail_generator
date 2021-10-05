@@ -8,6 +8,8 @@ import numpy as np
 import imutils
 from os.path import isfile, join
 import shutil
+import imquality.brisque as brisque
+import PIL.Image
 
 #folder_path = "/global/D1/projects/soccer_clipping/events-Allsvenskan2019-minus15-pluss25/"
 #folder_path = "/global/D1/projects/soccer_clipping/events-Eliteserien2019-minus15-pluss25/"
@@ -15,7 +17,7 @@ folder_path = "/home/andrehus/egne_prosjekter/videoAndOutput/"
 model = keras.models.load_model('/home/andrehus/egne_prosjekter/videoAndOutput/models/thumbnail_vs_no_thumbnail.h5')
 logo_detection_model = keras.models.load_model('/home/andrehus/egne_prosjekter/videoAndOutput/models/logo_detection/logo_detection.h5')
 thumbnail_output = folder_path + "/thumbnail_output/"
-num_videos = 5
+num_videos = 1
 
 def main():
     try:
@@ -54,8 +56,11 @@ def create_thumbnail(video_filename):
     
     # frame
     currentframe = 0
+    # Don't start before 500 frames:
+    currentframe = 500
+    
     # frames to skip
-    frame_skip = 20
+    frame_skip = 25
     while(True):
         # reading from frame
         ret,frame = cam.read()
@@ -77,13 +82,17 @@ def create_thumbnail(video_filename):
     cv2.destroyAllWindows()
     priority_images = predictAndRemove(frames_folder)
     for priority in priority_images:
+        priority = dict(sorted(priority.items(), key=lambda item: item[1], reverse=True))
+        print(priority)
         highestPri = 0
         image = ""
         for key in priority:
             print(key)
             if highestPri < priority[key]:
-                highestPri = priority[key]
-                image = key
+                score = predictBeauty(key)
+                if score > 50:
+                    highestPri = priority[key]
+                    image = key
             
         if image != "":
             newName = video_filename.split(".")[0] + "_thumbnail.jpg"
@@ -96,6 +105,14 @@ def create_thumbnail(video_filename):
             return
 
 
+
+def predictBeauty(image_path):
+    img = PIL.Image.open(image_path)
+    beautyScore = brisque.score(img)
+    print(image_path)
+    print("Beauty score:")
+    print(beautyScore)
+    return beautyScore
 
 def predictAndRemove(frames_folder):
     
@@ -112,11 +129,13 @@ def predictAndRemove(frames_folder):
         class_mode="binary", 
         shuffle=False)
     logo_probabilities = logo_detection_model.predict_generator(test_generator, TEST_SIZE)
+    logos = []
     for index, probability in enumerate(logo_probabilities):
         image_path = frames_folder + "/" + test_generator.filenames[index]
         if probability > 0.5:
             print(image_path)
             print("LOGO")
+            logos.append(image_path)
 
     probabilities = model.predict_generator(test_generator, TEST_SIZE)
     priority_images = [{} for x in range(5)]
@@ -124,31 +143,24 @@ def predictAndRemove(frames_folder):
     for index, probability in enumerate(probabilities):
 
         image_path = frames_folder + "/" + test_generator.filenames[index]
-       
+        #Beauty score 
         #print("")
         #print(""))
+        if image_path in logos:
+            continue
         print(image_path)
-        
-        image = cv2.imread(image_path)
-        gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-        fm = cv2.Laplacian(gray, cv2.CV_64F).var()
-        print("Blur score: ")
-        print(fm)
-        if fm < 100:
-            print("____________")
-            print("BLURRY")
-            print("____________")
-        else:
-            print("NOT BLURRY")
-        
+        print("probability:" + str(probability))
         if probability > 0.5:
             #print(image_path)
             #print("Probability: " + str(probability[0]*100) + " thumbnail")
-            
-            #print("Big face detected: " + str(detect_faces(image_path)))
+            #img = PIL.Image.open(image_path)
+            #beautyScore = brisque.score(img)
+            #print(image_path)
+            #print(beautyScore)
+            print("Big face detected: " + str(detect_faces(image_path)))
             if not detect_faces(image_path):
                 #os.remove(image_path)
-                priority_images[1][image_path] = probabbility
+                priority_images[1][image_path] = probability
             else:
                 priority_images[0][image_path] = probability
         else:
