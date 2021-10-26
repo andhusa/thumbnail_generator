@@ -1,3 +1,23 @@
+import os
+import cv2
+import imutils
+import numpy as np
+
+folder_path = "/home/andrehus/egne_prosjekter/videoAndOutput/testingNoenFrames/frames/"
+
+def main():
+    for f in os.listdir(folder_path):
+        name, ext = os.path.splitext(f)
+        if ext == ".jpg" or ".png":
+            orig = cv2.imread(folder_path + f)
+            orig = imutils.resize(orig, width=500)
+            gray = cv2.cvtColor(orig, cv2.COLOR_BGR2GRAY)
+            (score, blurry) = detect_blur_fft(gray)
+            print(f)
+            print(score)
+            print(blurry)
+
+
 def detect_blur_fft(image, size=60, thresh=5, vis=False):
 	# grab the dimensions of the image and use the dimensions to
 	# derive the center (x, y)-coordinates
@@ -38,3 +58,7 @@ def detect_blur_fft(image, size=60, thresh=5, vis=False):
 	# the image will be considered "blurry" if the mean value of the
 	# magnitudes is less than the threshold value
 	return (mean, mean <= thresh)
+
+
+if __name__ == "__main__":
+    main()
