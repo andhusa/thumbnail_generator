@@ -11,16 +11,18 @@ import shutil
 import imquality.brisque as brisque
 import PIL.Image
 from detectFace.detect_faces import detecting_face
-
+import dlib
+#from mtcnn.mtcnn import MTCNN
 
 #folder_path = "/global/D1/projects/soccer_clipping/events-Allsvenskan2019-minus15-pluss25/"
 folder_path = "/global/D1/projects/soccer_clipping/events-Eliteserien2019-minus15-pluss25/"
 #folder_path = "/home/andrehus/egne_prosjekter/videoAndOutput/"
 #model = keras.models.load_model('/home/andrehus/egne_prosjekter/videoAndOutput/models/thumbnail_vs_no_thumbnail.h5')
-model = keras.models.load_model('/home/andrehus/egne_prosjekter/videoAndOutput/models/thumbnail_vs_no_thumbnail_v2_model.h5')
+#model = keras.models.load_model('/home/andrehus/egne_prosjekter/videoAndOutput/models/thumbnail_vs_no_thumbnail_v2_model.h5')
+model = keras.models.load_model('/home/andrehus/egne_prosjekter/videoAndOutput/models/close_up_model.h5')
 logo_detection_model = keras.models.load_model('/home/andrehus/egne_prosjekter/videoAndOutput/models/logo_detection/logo_detection.h5')
 thumbnail_output = folder_path + "/thumbnail_output/"
-num_videos = 1
+num_videos = 20
 
 def main():
     try:
@@ -75,9 +77,12 @@ def create_thumbnail(video_filename):
         if currentframe % frame_skip == 0:
             # if video is still left continue creating images
             name = frames_folder + '/frames/frame' + str(currentframe) + '.jpg'
-            
-            # writing the extracted images
-            cv2.imwrite(name, frame, [int(cv2.IMWRITE_JPEG_QUALITY), 35])
+            width = int(frame.shape[1] * 0.5)
+            height = int(frame.shape[0] * 0.5)
+            dsize = (width, height)
+
+            img = cv2.resize(frame, dsize) 
+            cv2.imwrite(name, img)
     
             # increasing counter so that it will
             # show how many frames are created
@@ -97,7 +102,7 @@ def create_thumbnail(video_filename):
         i = 0
         for key in priority:
             scores.append(predictBeauty(key))
-            if scores[i] < 60:
+            if scores[i] < 35:
                 highestPri = priority[key]
                 image = key
                 break
@@ -181,10 +186,11 @@ def predictAndRemove(frames_folder):
         #print("")
         #print(""))
         if image_path in logos:
+            priority_images[3][image_path] = probability
             continue
         print(image_path)
         print("probability:" + str(probability))
-        if probability > 0.5:
+        if probability > 0.6:
             #print(image_path)
             #print("Probability: " + str(probability[0]*100) + " thumbnail")
             #img = PIL.Image.open(image_path)
@@ -202,14 +208,41 @@ def predictAndRemove(frames_folder):
             #print("Probability: " + str((1-probability[0])*100) + " no-thumbnail")
             priority_images[2][image_path] = probability
             
-
-    #print("priority_images:")
-    #print(priority_images)
     return priority_images
 
 
 
 def detect_faces(image):
+    
+    detector = dlib.get_frontal_face_detector()
+    img = cv2.imread(image)
+    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    faces = detector(gray, 1) # result
+    #to draw faces on image
+    for result in faces:
+        x = result.left()
+        y = result.top()
+        x1 = result.right()
+        y1 = result.bottom()
+        cv2.rectangle(img, (x, y), (x1, y1), (0, 0, 255), 2)
+        cv2.imwrite(image, img)
+    if len(faces) > 0:
+        return True
+    return False
+    '''
+    detector = MTCNN()
+    img = cv2.imread(image)
+    faces = detector.detect_faces(img)# result
+    #to draw faces on image
+    for result in faces:
+        x, y, w, h = result['box']
+        x1, y1 = x + w, y + h
+        cv2.rectangle(img, (x, y), (x1, y1), (0, 0, 255), 2)
+        cv2.imwrite(image, img)
+        return True
+    return False
+    
+    
     # Load the cascade
     face_cascade = cv2.CascadeClassifier('haarcascade_frontalface_default.xml')
     # Read the input image
@@ -220,11 +253,13 @@ def detect_faces(image):
     faces = face_cascade.detectMultiScale(gray, 1.1, 4)
 
     for (x, y, w, h) in faces:
-        #Want the size of face to be bigger than 80 pixels in at least one dimension
-        if w > 80 or h > 80:
+        #Want the size of face to be bigger than 30 pixels in at least one dimension
+        if w > 35 or h > 35:
+            cv2.rectangle(img, (x, y), (x + w, y + h), (0, 255, 0), 2)
+            cv2.imwrite(image, img)
             return True
 
     return False
-
+    '''
 if __name__ == "__main__":
     main()
