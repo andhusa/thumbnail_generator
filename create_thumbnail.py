@@ -4,13 +4,12 @@ import re
 from moviepy.editor import *
 from tensorflow import keras
 from keras.preprocessing.image import ImageDataGenerator
-import numpy as np
-import imutils
+#import numpy as np
+#import imutils
 from os.path import isfile, join
 import shutil
 import imquality.brisque as brisque
 import PIL.Image
-from detectFace.detect_faces import detecting_face
 import dlib
 #from mtcnn.mtcnn import MTCNN
 
@@ -22,7 +21,10 @@ folder_path = "/global/D1/projects/soccer_clipping/events-Eliteserien2019-minus1
 model = keras.models.load_model('/home/andrehus/egne_prosjekter/videoAndOutput/models/close_up_model.h5')
 logo_detection_model = keras.models.load_model('/home/andrehus/egne_prosjekter/videoAndOutput/models/logo_detection/logo_detection.h5')
 thumbnail_output = folder_path + "/thumbnail_output/"
-num_videos = 20
+num_videos = 1
+
+logoTesting = "/home/andrehus/egne_prosjekter/videoAndOutput/AllsvenskanTestLogo/Background"
+#logoTesting = "/home/andrehus/egne_prosjekter/videoAndOutput/logos"
 
 def main():
     try:
@@ -61,12 +63,12 @@ def create_thumbnail(video_filename):
     
     # frame
     currentframe = 0
-    # Don't start before 500 frames:
+    # Don't start before 650 frames:
     startFrame = 650
-    
+    maxFrames = 3000
     # frames to skip
     frame_skip = 30
-    while(True):
+    while(currentframe < maxFrames):
         # reading from frame
         ret,frame = cam.read()
         if not ret:
@@ -134,10 +136,8 @@ def create_thumbnail(video_filename):
 
             cam.release()
             cv2.destroyAllWindows()
-            #shutil.copy(image, thumbnail_output + newName)
             try:
-                #shutil.rmtree(frames_folder)
-                pass
+                shutil.rmtree(frames_folder)
             except OSError as e:
                 print("Error: %s - %s." % (e.filename, e.strerror))
             return
@@ -155,26 +155,52 @@ def predictBeauty(image_path):
 
 def predictAndRemove(frames_folder):
     
-    #dir is your directory path as string
+    #frames_folder is your directory path as string
     test_data_generator = ImageDataGenerator(rescale=1./255)
     IMAGE_SIZE = 200
     TEST_SIZE = len(next(os.walk(frames_folder + "/frames"))[2]) 
     print("TEST SIZE: " + str(TEST_SIZE))
     IMAGE_WIDTH, IMAGE_HEIGHT = IMAGE_SIZE, IMAGE_SIZE
+    '''
+    LOGO_TEST_SIZE = len(next(os.walk(logoTesting + "/frames"))[2])
+    print("TEST SIZE: " + str(LOGO_TEST_SIZE))
+
+    test_generator_logo = test_data_generator.flow_from_directory(
+        logoTesting,
+        target_size=(IMAGE_WIDTH, IMAGE_HEIGHT),
+        batch_size=1,
+        class_mode="binary",
+        shuffle=False)
+    logo_test_prob = logo_detection_model.predict_generator(test_generator_logo, LOGO_TEST_SIZE)
+    for index, probability in enumerate(logo_test_prob):
+        if probability > 0.05:
+            
+            print("LOGO")
+            print(probability)
+            print(test_generator_logo.filenames[index])
+        else:
+            print("NOT LOGO")
+            print(probability)
+            print(test_generator_logo.filenames[index])
+    '''
+
+
+
     test_generator = test_data_generator.flow_from_directory(
         frames_folder,
         target_size=(IMAGE_WIDTH, IMAGE_HEIGHT),
         batch_size=1,
         class_mode="binary", 
         shuffle=False)
+    
     logo_probabilities = logo_detection_model.predict_generator(test_generator, TEST_SIZE)
     logos = []
     for index, probability in enumerate(logo_probabilities):
         image_path = frames_folder + "/" + test_generator.filenames[index]
-        if probability > 0.5:
+        if probability > 0.1:
             print(image_path)
             print("LOGO")
-            logos.append(image_path)
+            logos.append(image_path) 
 
     probabilities = model.predict_generator(test_generator, TEST_SIZE)
     priority_images = [{} for x in range(5)]
@@ -191,6 +217,7 @@ def predictAndRemove(frames_folder):
         print(image_path)
         print("probability:" + str(probability))
         if probability > 0.6:
+            print("DETECT")
             #print(image_path)
             #print("Probability: " + str(probability[0]*100) + " thumbnail")
             #img = PIL.Image.open(image_path)
