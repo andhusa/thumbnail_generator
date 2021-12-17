@@ -14,21 +14,30 @@ import dlib
 
 folder_path = "/global/D1/projects/soccer_clipping/events-Allsvenskan2019-minus15-pluss25/"
 #folder_path = "/global/D1/projects/soccer_clipping/events-Eliteserien2019-minus15-pluss25/"
-#folder_path = "/home/andrehus/egne_prosjekter/videoAndOutput/"
-#model = keras.models.load_model('/home/andrehus/egne_prosjekter/videoAndOutput/models/thumbnail_vs_no_thumbnail.h5')
-#model = keras.models.load_model('/home/andrehus/egne_prosjekter/videoAndOutput/models/thumbnail_vs_no_thumbnail_v2_model.h5')
 close_up_model = '/home/andrehus/egne_prosjekter/videoAndOutput/models/close_up_model.h5'
 logo_detection_model = '/home/andrehus/egne_prosjekter/videoAndOutput/models/logo_detection/logo_detection.h5'
 thumbnail_output = os.path.dirname(os.path.abspath(__file__)) + "/thumbnail_output/"
-num_videos = 5
+num_videos = 2
 haarStr = "haar"
 dlibStr = "dlib"
 close_up_threshold = 0.6
 brisque_threshold = 35
+#Number of frames we want to extract
+totalNumFrames = 50
+#Number of frames to skip in the start
+cutStartByFrames = 650
 
 
 def main():
     faceDetModel = ""
+    #Flags that should be possible:
+
+    #1. First argument should be file or folder to input
+    #2. Flag which face detection model should be used
+    #3. Decide the threshold values for close-up or brisque
+
+    #Need to figure out how one specifies which models one wants to use when running
+
     try:
         argument = sys.argv[1]
         if argument == "-" + haarStr:
@@ -76,10 +85,9 @@ def create_thumbnail(video_filename, faceDetModel):
     frames_folder = folder_path + video_filename.split(".")[0] + "_frames"
     # Read the video from specified path
     cam = cv2.VideoCapture(video_path)
-    
+    totalFrames = int(cam.get(cv2.CAP_PROP_FRAME_COUNT))
     try:
         # creating a folder for frames
-
         if not os.path.exists(frames_folder):
             os.makedirs(frames_folder)
             os.makedirs(frames_folder + "/frames")
@@ -88,23 +96,22 @@ def create_thumbnail(video_filename, faceDetModel):
     # if not created then raise error
     except OSError:
         print ('Error: Couldnt create directory')
+        
     
     # frame
     currentframe = 0
-    # Don't start before 650 frames:
-    startFrame = 650
-    maxFrames = 3000
     # frames to skip
-    frame_skip = 30
-    while(currentframe < maxFrames):
+    frame_skip = (totalFrames-cutStartByFrames)//totalNumFrames
+    numFramesExtracted = 0
+    while(True):
         # reading from frame
         ret,frame = cam.read()
         if not ret:
             break
-        if currentframe < startFrame-1:
+        if currentframe <= cutStartByFrames:
             currentframe += 1
             continue
-        if currentframe % frame_skip == 0:
+        if currentframe % frame_skip == 0 and numFramesExtracted < totalNumFrames:
             # if video is still left continue creating images
             name = frames_folder + '/frames/frame' + str(currentframe) + '.jpg'
             width = int(frame.shape[1] * 0.5)
@@ -113,7 +120,7 @@ def create_thumbnail(video_filename, faceDetModel):
 
             img = cv2.resize(frame, dsize) 
             cv2.imwrite(name, img)
-    
+            numFramesExtracted += 1
             # increasing counter so that it will
             # show how many frames are created
         currentframe += 1
@@ -169,17 +176,6 @@ def create_thumbnail(video_filename, faceDetModel):
         return
     return
 
-
-
-def predictBrisque(image_path):
-    img = PIL.Image.open(image_path)
-    brisqueScore = brisque.score(img)
-    print("")
-    print(image_path.split("/")[-1])
-    print("Brisque score:")
-    print(brisqueScore)
-    return brisqueScore
-
 def groupFrames(frames_folder, faceDetModel):
     
     #frames_folder is your directory path as string
@@ -226,7 +222,14 @@ def groupFrames(frames_folder, faceDetModel):
             
     return priority_images
 
-
+def predictBrisque(image_path):
+    img = PIL.Image.open(image_path)
+    brisqueScore = brisque.score(img)
+    print("")
+    print(image_path.split("/")[-1])
+    print("Brisque score:")
+    print(brisqueScore)
+    return brisqueScore
 
 def detect_faces(image, faceDetModel):
     biggestFace = 0
