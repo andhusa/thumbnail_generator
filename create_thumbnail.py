@@ -23,6 +23,9 @@ thumbnail_output = os.path.dirname(os.path.abspath(__file__)) + "/thumbnail_outp
 num_videos = 5
 haarStr = "haar"
 dlibStr = "dlib"
+close_up_threshold = 0.6
+brisque_threshold = 35
+
 
 def main():
     faceDetModel = ""
@@ -135,7 +138,7 @@ def create_thumbnail(video_filename, faceDetModel):
             if finalThumbnail == "":
                 bestScore = score
                 finalThumbnail = key
-            if score < 35:
+            if score < brisque_threshold:
                 image = key
                 break
             if score < bestScore:
@@ -212,7 +215,7 @@ def groupFrames(frames_folder, faceDetModel):
         if image_path in logos:
             print("Logo detected")
             priority_images[3][image_path] = probability
-        elif probability > 0.6:
+        elif probability > close_up_threshold:
             face_size = detect_faces(image_path, faceDetModel)
             if face_size > 0:
                 print("Face detected: " + str(face_size) + "px")
