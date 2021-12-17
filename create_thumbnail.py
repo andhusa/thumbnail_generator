@@ -17,8 +17,8 @@ folder_path = "/global/D1/projects/soccer_clipping/events-Allsvenskan2019-minus1
 #folder_path = "/home/andrehus/egne_prosjekter/videoAndOutput/"
 #model = keras.models.load_model('/home/andrehus/egne_prosjekter/videoAndOutput/models/thumbnail_vs_no_thumbnail.h5')
 #model = keras.models.load_model('/home/andrehus/egne_prosjekter/videoAndOutput/models/thumbnail_vs_no_thumbnail_v2_model.h5')
-close_up_model = keras.models.load_model('/home/andrehus/egne_prosjekter/videoAndOutput/models/close_up_model.h5')
-logo_detection_model = keras.models.load_model('/home/andrehus/egne_prosjekter/videoAndOutput/models/logo_detection/logo_detection.h5')
+close_up_model = '/home/andrehus/egne_prosjekter/videoAndOutput/models/close_up_model.h5'
+logo_detection_model = '/home/andrehus/egne_prosjekter/videoAndOutput/models/logo_detection/logo_detection.h5'
 thumbnail_output = os.path.dirname(os.path.abspath(__file__)) + "/thumbnail_output/"
 num_videos = 5
 haarStr = "haar"
@@ -53,7 +53,13 @@ def main():
     except OSError:
         print("Error: Couldnt create thumbnail_output directory")
         return
+
+    global close_up_model
+    global logo_detection_model
+    close_up_model = keras.models.load_model(close_up_model)
+    logo_detection_model = keras.models.load_model(logo_detection_model)
     i = 0
+    
     for f in os.listdir(folder_path):
         if i >= num_videos:
             return
