@@ -40,14 +40,7 @@ def main():
         else:
             raise
     except:
-        print("")
-        print("Specify with flag:")
-        print("")
-        print("Faster generating, but more unpresice:")
-        print("python " + os.path.basename(__file__) + " -haar")
-        print("")
-        print("Slower generating, but more presice:")
-        print("python " + os.path.basename(__file__) + " -dlib")
+        notRunningPrintFlags()
         return
     
     try:
@@ -261,6 +254,16 @@ def detect_faces(image, faceDetModel):
         print("No face detection model in use")
 
     return biggestFace
+
+def notRunningPrintFlags():
+    print("")
+    print("Specify with flag:")
+    print("")
+    print("Faster generating, but more unpresice:")
+    print("python " + os.path.basename(__file__) + " -haar")
+    print("")
+    print("Slower generating, but more presice:")
+    print("python " + os.path.basename(__file__) + " -dlib")
 
 if __name__ == "__main__":
     main()
