@@ -5,7 +5,7 @@ import sys
 from moviepy.editor import *
 from tensorflow import keras
 from keras.preprocessing.image import ImageDataGenerator
-
+import argparse
 from os.path import isfile, join
 import shutil
 import imquality.brisque as brisque
@@ -26,31 +26,43 @@ brisque_threshold = 35
 totalNumFrames = 50
 #Number of frames to skip in the start
 cutStartByFrames = 650
+runFaceDetection = True
+runBrisque = True
+runLogoDetection = True
+runCloseUpDetection = True
 
 
 def main():
+    parser = argparse.ArgumentParser(description="Thumbnail generator")
+    parser.add_argument("destination", help="Destination of the input to be processed. Can be file or folder", nargs=1)
+    group = parser.add_mutually_exclusive_group(required = True)
+    group.add_argument("-dlib", action='store_true', help="Dlib detection model is slower, but more presice.")
+    group.add_argument("-haar", action='store_true', help="Haar detection model is faster, but less precise")
+    #parser.add_argument("close_up threshold value")
+    #parser.add_argument("brisque threshold value")
+    #parser.add_argument("")
+
+    args = parser.parse_args()
+    print(args.destination)
     faceDetModel = ""
+
+    if args.dlib:
+        faceDetModel = dlibStr
+        print("Using Dlib face detection model")
+    else:
+        faceDetModel = haarStr
+        print("Using Haar face detection model")
+
+    #print(args.accumulate(args.integers))
     #Flags that should be possible:
 
     #1. First argument should be file or folder to input
     #2. Flag which face detection model should be used
     #3. Decide the threshold values for close-up or brisque
+    #4. Decide how many frames to process
+    #5. Decide to exclude modules
 
     #Need to figure out how one specifies which models one wants to use when running
-
-    try:
-        argument = sys.argv[1]
-        if argument == "-" + haarStr:
-            faceDetModel = haarStr
-            print("Using Haar face detection model")
-        elif argument == "-" + dlibStr:
-            faceDetModel = dlibStr
-            print("Using Dlib face detection model")
-        else:
-            raise
-    except:
-        notRunningPrintFlags()
-        return
     
     try:
         if not os.path.exists(thumbnail_output):
@@ -138,19 +150,24 @@ def create_thumbnail(video_filename, faceDetModel):
         print("Frames in group: ")
         for key in priority:
             print(key.split("/")[-1])
-        bestScore = 0
-        for key in priority:
-            score = predictBrisque(key)
-            if finalThumbnail == "":
-                bestScore = score
+        
+        if runBrisque:
+            bestScore = 0
+            for key in priority:
+                score = predictBrisque(key)
+                if finalThumbnail == "":
+                    bestScore = score
+                    finalThumbnail = key
+                if score < brisque_threshold:
+                    finalThumbnail = key
+                    break
+                if score < bestScore:
+                    bestScore = score
+                    finalThumbnail = key
+        else:
+            for key in priority:
                 finalThumbnail = key
-            if score < brisque_threshold:
-                image = key
                 break
-            if score < bestScore:
-                bestScore = score
-                finalThumbnail = key
-
         
     if finalThumbnail != "":
         newName = video_filename.split(".")[0] + "_thumbnail.jpg"
@@ -184,20 +201,20 @@ def groupFrames(frames_folder, faceDetModel):
     TEST_SIZE = len(next(os.walk(frames_folder + "/frames"))[2]) 
     print("TEST SIZE: " + str(TEST_SIZE))
     IMAGE_WIDTH, IMAGE_HEIGHT = IMAGE_SIZE, IMAGE_SIZE
-
-    test_generator = test_data_generator.flow_from_directory(
-        frames_folder,
-        target_size=(IMAGE_WIDTH, IMAGE_HEIGHT),
-        batch_size=1,
-        class_mode="binary", 
-        shuffle=False)
     
-    logo_probabilities = logo_detection_model.predict_generator(test_generator, TEST_SIZE)
+    test_generator = test_data_generator.flow_from_directory(
+            frames_folder,
+            target_size=(IMAGE_WIDTH, IMAGE_HEIGHT),
+            batch_size=1,
+            class_mode="binary", 
+            shuffle=False)
     logos = []
-    for index, probability in enumerate(logo_probabilities):
-        image_path = frames_folder + "/" + test_generator.filenames[index]
-        if probability > 0.1:
-            logos.append(image_path) 
+    if runLogoDetection: 
+        logo_probabilities = logo_detection_model.predict_generator(test_generator, TEST_SIZE)
+        for index, probability in enumerate(logo_probabilities):
+            image_path = frames_folder + "/" + test_generator.filenames[index]
+            if probability > 0.1:
+                logos.append(image_path) 
 
     probabilities = close_up_model.predict_generator(test_generator, TEST_SIZE)
     priority_images = [{} for x in range(4)]
@@ -211,10 +228,13 @@ def groupFrames(frames_folder, faceDetModel):
             print("Logo detected")
             priority_images[3][image_path] = probability
         elif probability > close_up_threshold:
-            face_size = detect_faces(image_path, faceDetModel)
-            if face_size > 0:
-                print("Face detected: " + str(face_size) + "px")
-                priority_images[0][image_path] = probability
+            if runFaceDetection:
+                face_size = detect_faces(image_path, faceDetModel)
+                if face_size > 0:
+                    print("Face detected: " + str(face_size) + "px")
+                    priority_images[0][image_path] = probability
+                else:
+                    priority_images[1][image_path] = probability
             else:
                 priority_images[1][image_path] = probability
         else:
