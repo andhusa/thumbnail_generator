@@ -6,7 +6,7 @@ from moviepy.editor import *
 from tensorflow import keras
 from keras.preprocessing.image import ImageDataGenerator
 import argparse
-from os.path import isfile, join
+from os.path import isfile, join, isdir
 import shutil
 import imquality.brisque as brisque
 import PIL.Image
@@ -14,38 +14,51 @@ import dlib
 
 folder_path = "/global/D1/projects/soccer_clipping/events-Allsvenskan2019-minus15-pluss25/"
 #folder_path = "/global/D1/projects/soccer_clipping/events-Eliteserien2019-minus15-pluss25/"
-close_up_model = '/home/andrehus/egne_prosjekter/videoAndOutput/models/close_up_model.h5'
-logo_detection_model = '/home/andrehus/egne_prosjekter/videoAndOutput/models/logo_detection/logo_detection.h5'
+
 thumbnail_output = os.path.dirname(os.path.abspath(__file__)) + "/thumbnail_output/"
+
 num_videos = 2
 haarStr = "haar"
 dlibStr = "dlib"
-close_up_threshold = 0.6
-brisque_threshold = 35
-#Number of frames we want to extract
-totalNumFrames = 50
-#Number of frames to skip in the start
-cutStartByFrames = 650
-runFaceDetection = True
-runBrisque = True
-runLogoDetection = True
+
 runCloseUpDetection = True
 
 
-def main():
+def main(close_up_model, logo_detection_model):
+    #Default values
+    close_up_threshold = 0.6
+    brisque_threshold = 35
+    totalNumFrames = 50
+    cutStartByFrames = 650
+
     parser = argparse.ArgumentParser(description="Thumbnail generator")
-    parser.add_argument("destination", help="Destination of the input to be processed. Can be file or folder", nargs=1)
+    parser.add_argument("destination", nargs=1, help="Destination of the input to be processed. Can be file or folder")
     group = parser.add_mutually_exclusive_group(required = True)
     group.add_argument("-dlib", action='store_true', help="Dlib detection model is slower, but more presice.")
     group.add_argument("-haar", action='store_true', help="Haar detection model is faster, but less precise")
-    #parser.add_argument("close_up threshold value")
-    #parser.add_argument("brisque threshold value")
-    #parser.add_argument("")
+    
+    #Flags that excludes models running
+    parser.add_argument("-xf", "--xFaceDetection", default=True, action="store_false", help="Don't run the face detection")
+    parser.add_argument("-xb", "--xBrisque", default=True, action="store_false", help="Don't run Brisque")
+    parser.add_argument("-xl", "--xLogoDetection", default=True, action="store_false", help="Don't run logo detection")
+
+    #Flags fixing default values
+    parser.add_argument("-cuthr", "--closeUpThreshold", type=restricted_float, default=[close_up_threshold], nargs=1, help="The threshold value for the close-up detection model. The value must be between 0 and 1. The default is: " + str(close_up_threshold))
+    parser.add_argument("-brthr", "--brisqueThreshold", type=float, default=[brisque_threshold], nargs=1, help="The threshold value for the brisque model. The default is: " + str(brisque_threshold))
+    parser.add_argument("-csfr", "--cutStartFrames", type=positive_int, default=[cutStartByFrames], nargs=1, help="The number of frames to cut from start of the video. These will not be processed in the thumbnail selection. The default is: " + str(cutStartByFrames))
+    parser.add_argument("-nf", "--numberOfFrames", type=above_zero_int, default=[totalNumFrames], nargs=1, help="Number of frames to be extracted from the video for the thumbnail selection process. The default is: " + str(totalNumFrames))
 
     args = parser.parse_args()
-    print(args.destination)
-    faceDetModel = ""
+    destination = args.destination[0]
+    runFaceDetection = args.xFaceDetection
+    runBrisque = args.xBrisque
+    runLogoDetection = args.xLogoDetection
+    close_up_threshold = args.closeUpThreshold[0]
+    brisque_threshold = args.brisqueThreshold[0]
+    cutStartByFrames = args.cutStartFrames[0]
+    totalNumFrames = args.numberOfFrames[0]
 
+    faceDetModel = ""
     if args.dlib:
         faceDetModel = dlibStr
         print("Using Dlib face detection model")
@@ -58,12 +71,20 @@ def main():
 
     #1. First argument should be file or folder to input
     #2. Flag which face detection model should be used
-    #3. Decide the threshold values for close-up or brisque
-    #4. Decide how many frames to process
-    #5. Decide to exclude modules
+    processFolder = False
+    processFile = False
+    if os.path.isdir(destination):
+        processFolder = True
+        if destination[-1] != "/":
+            destination = destination + "/"
+        print("isfolder")
+    elif os.path.isfile(destination):
+        processFile = True
+        print("isfile")
+    else:
+        print("Error: The input destination was neither file or directory") 
+        return
 
-    #Need to figure out how one specifies which models one wants to use when running
-    
     try:
         if not os.path.exists(thumbnail_output):
             os.makedirs(thumbnail_output)
@@ -72,32 +93,41 @@ def main():
                 print(f)
                 #os.remove(os.path.join(thumbnail_output, f))
     except OSError:
-        print("Error: Couldnt create thumbnail_output directory")
+        print("Error: Couldn't create thumbnail_output directory")
         return
 
-    global close_up_model
-    global logo_detection_model
+
     close_up_model = keras.models.load_model(close_up_model)
-    logo_detection_model = keras.models.load_model(logo_detection_model)
-    i = 0
-    
-    for f in os.listdir(folder_path):
-        if i >= num_videos:
-            return
-        name, ext = os.path.splitext(f)
+    if runLogoDetection:
+        logo_detection_model = keras.models.load_model(logo_detection_model)
+
+    if processFile:
+        name, ext = os.path.splitext(destination)
         if ext == ".ts":
-            create_thumbnail(name + ext, faceDetModel)
-            i += 1
+            create_thumbnail(name + ext, close_up_model, logo_detection_model, faceDetModel, runFaceDetection, runBrisque, runLogoDetection, close_up_threshold, brisque_threshold, cutStartByFrames, totalNumFrames)
+    elif processFolder:
+
+        i = 0
+        for f in os.listdir(destination):
+            if i >= num_videos:
+                return
+            name, ext = os.path.splitext(f)
+            if ext == ".ts":
+                create_thumbnail(destination + name + ext, close_up_model, logo_detection_model, faceDetModel, runFaceDetection, runBrisque, runLogoDetection, close_up_threshold, brisque_threshold, cutStartByFrames, totalNumFrames)
+                i += 1
         
 
-def create_thumbnail(video_filename, faceDetModel):
-    print("Finding thumbnail for: ") 
-    print(video_filename)
-    video_path = folder_path + video_filename
-    frames_folder = folder_path + video_filename.split(".")[0] + "_frames"
+def create_thumbnail(video_path, close_up_model, logo_detection_model, faceDetModel, runFaceDetection, runBrisque, runLogoDetection, close_up_threshold, brisque_threshold, cutStartByFrames, totalNumFrames):
+    print("Finding thumbnail for: ")
+    video_filename = video_path.split("/")[-1]
+    frames_folder_outer = os.path.dirname(os.path.abspath(__file__)) + "/extractedFrames/"
+    frames_folder = frames_folder_outer + video_filename.split(".")[0] + "_frames"
     # Read the video from specified path
     cam = cv2.VideoCapture(video_path)
     totalFrames = int(cam.get(cv2.CAP_PROP_FRAME_COUNT))
+    if totalFrames < cutStartByFrames:
+        print("The starting cut frame doesn't exist")
+        return
     try:
         # creating a folder for frames
         if not os.path.exists(frames_folder):
@@ -140,7 +170,7 @@ def create_thumbnail(video_filename, faceDetModel):
     # Release all space and windows once done
     cam.release()
     cv2.destroyAllWindows()
-    priority_images = groupFrames(frames_folder, faceDetModel)
+    priority_images = groupFrames(frames_folder, close_up_model, logo_detection_model ,faceDetModel, runFaceDetection, runBrisque, runLogoDetection, close_up_threshold, brisque_threshold)
     finalThumbnail = ""
     for priority in priority_images:
         if finalThumbnail != "":
@@ -187,13 +217,13 @@ def create_thumbnail(video_filename, faceDetModel):
         print("")
         print("Final thumbnail frame number: " + str(frameNum))
         try:
-            shutil.rmtree(frames_folder)
+            shutil.rmtree(frames_folder_outer)
         except OSError as e:
             print("Error: %s - %s." % (e.filename, e.strerror))
         return
     return
 
-def groupFrames(frames_folder, faceDetModel):
+def groupFrames(frames_folder, close_up_model, logo_detection_model, faceDetModel, runFaceDetection, runBrisque, runLogoDetection, close_up_threshold, brisque_threshold):
     
     #frames_folder is your directory path as string
     test_data_generator = ImageDataGenerator(rescale=1./255)
@@ -284,15 +314,35 @@ def detect_faces(image, faceDetModel):
 
     return biggestFace
 
-def notRunningPrintFlags():
-    print("")
-    print("Specify with flag:")
-    print("")
-    print("Faster generating, but more unpresice:")
-    print("python " + os.path.basename(__file__) + " -haar")
-    print("")
-    print("Slower generating, but more presice:")
-    print("python " + os.path.basename(__file__) + " -dlib")
+def restricted_float(x):
+    try:
+        x = float(x)
+    except ValueError:
+        raise argparse.ArgumentTypeError("%r not a floating-point literal" % (x,))
+
+    if x < 0.0 or x > 1.0:
+        raise argparse.ArgumentTypeError("%r not in range [0.0, 1.0]"%(x,))
+    return x
+
+def positive_int(x):
+    try:
+        x = int(x)
+    except ValueError:
+        raise argparse.ArgumentTypeError("%r not an int literal" % (x,))
+    if x < 0:
+        raise argparse.ArgumentTypeError("%r not a positive int"%(x,))
+    return x
+
+def above_zero_int(x):
+    try:
+        x = int(x)
+    except ValueError:
+        raise argparse.ArgumentTypeError("%r not an int literal" % (x,))
+    if x <= 0:
+        raise argparse.ArgumentTypeError("%r not above zero"%(x,))
+    return x
 
 if __name__ == "__main__":
-    main()
+    close_up_model = '/home/andrehus/egne_prosjekter/videoAndOutput/models/close_up_model.h5'
+    logo_detection_model = '/home/andrehus/egne_prosjekter/videoAndOutput/models/logo_detection/logo_detection.h5'
+    main(close_up_model, logo_detection_model)
