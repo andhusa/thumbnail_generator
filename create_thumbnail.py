@@ -30,6 +30,7 @@ def main(close_up_model, logo_detection_model):
     brisque_threshold = 35
     totalNumFrames = 50
     cutStartByFrames = 650
+    downscaleBy = 0.5
 
     parser = argparse.ArgumentParser(description="Thumbnail generator")
     parser.add_argument("destination", nargs=1, help="Destination of the input to be processed. Can be file or folder")
@@ -47,6 +48,7 @@ def main(close_up_model, logo_detection_model):
     parser.add_argument("-brthr", "--brisqueThreshold", type=float, default=[brisque_threshold], nargs=1, help="The threshold value for the brisque model. The default is: " + str(brisque_threshold))
     parser.add_argument("-csfr", "--cutStartFrames", type=positive_int, default=[cutStartByFrames], nargs=1, help="The number of frames to cut from start of the video. These will not be processed in the thumbnail selection. The default is: " + str(cutStartByFrames))
     parser.add_argument("-nf", "--numberOfFrames", type=above_zero_int, default=[totalNumFrames], nargs=1, help="Number of frames to be extracted from the video for the thumbnail selection process. The default is: " + str(totalNumFrames))
+    parser.add_argument("-ds", "--downscale", type=restricted_float, default=[downscaleBy], nargs=1, help="The value deciding how much the images to be processed should be downscaled. The defaul value is: " + str(downscaleBy))
 
     args = parser.parse_args()
     destination = args.destination[0]
@@ -57,6 +59,7 @@ def main(close_up_model, logo_detection_model):
     brisque_threshold = args.brisqueThreshold[0]
     cutStartByFrames = args.cutStartFrames[0]
     totalNumFrames = args.numberOfFrames[0]
+    downscaleBy = args.downscale[0]
 
     faceDetModel = ""
     if args.dlib:
@@ -66,11 +69,6 @@ def main(close_up_model, logo_detection_model):
         faceDetModel = haarStr
         print("Using Haar face detection model")
 
-    #print(args.accumulate(args.integers))
-    #Flags that should be possible:
-
-    #1. First argument should be file or folder to input
-    #2. Flag which face detection model should be used
     processFolder = False
     processFile = False
     if os.path.isdir(destination):
@@ -113,11 +111,11 @@ def main(close_up_model, logo_detection_model):
                 return
             name, ext = os.path.splitext(f)
             if ext == ".ts":
-                create_thumbnail(destination + name + ext, close_up_model, logo_detection_model, faceDetModel, runFaceDetection, runBrisque, runLogoDetection, close_up_threshold, brisque_threshold, cutStartByFrames, totalNumFrames)
+                create_thumbnail(destination + name + ext, downscaleBy, close_up_model, logo_detection_model, faceDetModel, runFaceDetection, runBrisque, runLogoDetection, close_up_threshold, brisque_threshold, cutStartByFrames, totalNumFrames)
                 i += 1
         
 
-def create_thumbnail(video_path, close_up_model, logo_detection_model, faceDetModel, runFaceDetection, runBrisque, runLogoDetection, close_up_threshold, brisque_threshold, cutStartByFrames, totalNumFrames):
+def create_thumbnail(video_path, downscaleBy, close_up_model, logo_detection_model, faceDetModel, runFaceDetection, runBrisque, runLogoDetection, close_up_threshold, brisque_threshold, cutStartByFrames, totalNumFrames):
     print("Finding thumbnail for: ")
     video_filename = video_path.split("/")[-1]
     frames_folder_outer = os.path.dirname(os.path.abspath(__file__)) + "/extractedFrames/"
@@ -156,8 +154,8 @@ def create_thumbnail(video_path, close_up_model, logo_detection_model, faceDetMo
         if currentframe % frame_skip == 0 and numFramesExtracted < totalNumFrames:
             # if video is still left continue creating images
             name = frames_folder + '/frames/frame' + str(currentframe) + '.jpg'
-            width = int(frame.shape[1] * 0.5)
-            height = int(frame.shape[0] * 0.5)
+            width = int(frame.shape[1] * downscaleBy)
+            height = int(frame.shape[0] * downscaleBy)
             dsize = (width, height)
 
             img = cv2.resize(frame, dsize) 
