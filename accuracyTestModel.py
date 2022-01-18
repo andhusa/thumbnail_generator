@@ -12,7 +12,9 @@ import shutil
 #model = keras.models.load_model('/home/andrehus/egne_prosjekter/videoAndOutput/models/logo_detection/logo_detection.h5')
 
 #close up model:
-model = keras.models.load_model('/home/andrehus/egne_prosjekter/videoAndOutput/models/close_up_model.h5')
+#model = keras.models.load_model('/home/andrehus/egne_prosjekter/videoAndOutput/models/close_up_model.h5')
+model = keras.models.load_model('/home/andrehus/egne_prosjekter/videoAndOutput/models/close_up_model_2.h5')
+
 
 probabilityThr = 0.5
 
@@ -39,13 +41,13 @@ def main(folder):
         className = fileName.split("_")[0]
         print(className)
         print(probability)
-        if probability > probabilityThr:
+        if probability < probabilityThr:
             if className == "closeUp" or className == "logo":
                 trueP += 1
                 print("trueP")
             else:
                 falseP += 1
-                print("flaseP")
+                print("falseP")
         else:
             if className == "closeUp" or className == "logo":
                 falseN += 1

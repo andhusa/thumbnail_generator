@@ -104,6 +104,8 @@ def moveToTempFolder(folder):
     tempFolder = newFolder + "temp/"
     if not os.path.exists(newFolder):
         os.mkdir(newFolder)
+    else:
+        raise Exception("Folder already exist, delete the existing folder if you want to create a new one")
     if not os.path.exists(tempFolder):
         os.mkdir(tempFolder)
     

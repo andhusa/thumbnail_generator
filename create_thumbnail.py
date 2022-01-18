@@ -1,23 +1,22 @@
 import cv2
 import os
-import re
-import sys
 from moviepy.editor import *
 from tensorflow import keras
 from keras.preprocessing.image import ImageDataGenerator
 import argparse
-from os.path import isfile, join, isdir
+from os.path import isfile, isdir
 import shutil
 import imquality.brisque as brisque
 import PIL.Image
 import dlib
 
 folder_path = "/global/D1/projects/soccer_clipping/events-Allsvenskan2019-minus15-pluss25/"
+#video="/global/D1/projects/soccer_clipping/events-Allsvenskan2019-minus15-pluss25/akwaxywqi4qo3.ts"
 #folder_path = "/global/D1/projects/soccer_clipping/events-Eliteserien2019-minus15-pluss25/"
-
+haarXml = 'haarcascade_frontalface_default.xml'
 thumbnail_output = os.path.dirname(os.path.abspath(__file__)) + "/thumbnail_output/"
 
-num_videos = 2
+#num_videos = 2
 haarStr = "haar"
 dlibStr = "dlib"
 
@@ -28,9 +27,10 @@ def main(close_up_model, logo_detection_model):
     #Default values
     close_up_threshold = 0.6
     brisque_threshold = 35
-    totalNumFrames = 50
+    totalFramesToExtract = 50
     cutStartByFrames = 650
-    downscaleBy = 0.5
+    downscaleOnProcessing = 0.5
+    downscaleOutput = 1.0
 
     parser = argparse.ArgumentParser(description="Thumbnail generator")
     parser.add_argument("destination", nargs=1, help="Destination of the input to be processed. Can be file or folder")
@@ -47,9 +47,10 @@ def main(close_up_model, logo_detection_model):
     parser.add_argument("-cuthr", "--closeUpThreshold", type=restricted_float, default=[close_up_threshold], nargs=1, help="The threshold value for the close-up detection model. The value must be between 0 and 1. The default is: " + str(close_up_threshold))
     parser.add_argument("-brthr", "--brisqueThreshold", type=float, default=[brisque_threshold], nargs=1, help="The threshold value for the brisque model. The default is: " + str(brisque_threshold))
     parser.add_argument("-csfr", "--cutStartFrames", type=positive_int, default=[cutStartByFrames], nargs=1, help="The number of frames to cut from start of the video. These will not be processed in the thumbnail selection. The default is: " + str(cutStartByFrames))
-    parser.add_argument("-nf", "--numberOfFrames", type=above_zero_int, default=[totalNumFrames], nargs=1, help="Number of frames to be extracted from the video for the thumbnail selection process. The default is: " + str(totalNumFrames))
-    parser.add_argument("-ds", "--downscale", type=restricted_float, default=[downscaleBy], nargs=1, help="The value deciding how much the images to be processed should be downscaled. The defaul value is: " + str(downscaleBy))
-
+    parser.add_argument("-nf", "--numberOfFramesToExtract", type=above_zero_int, default=[totalFramesToExtract], nargs=1, help="Number of frames to be extracted from the video for the thumbnail selection process. The default is: " + str(totalFramesToExtract))
+    parser.add_argument("-ds", "--downscaleProcessingImages", type=restricted_float, default=[downscaleOnProcessing], nargs=1, help="The value deciding how much the images to be processed should be downscaled. The default value is: " + str(downscaleOnProcessing))
+    parser.add_argument("-dso", "--downscaleOutputImage", type=restricted_float, default=[downscaleOutput], nargs=1, help="The value deciding how much the output thumbnail image should be downscaled. The default value is: " + str(downscaleOutput))
+    
     args = parser.parse_args()
     destination = args.destination[0]
     runFaceDetection = args.xFaceDetection
@@ -58,8 +59,9 @@ def main(close_up_model, logo_detection_model):
     close_up_threshold = args.closeUpThreshold[0]
     brisque_threshold = args.brisqueThreshold[0]
     cutStartByFrames = args.cutStartFrames[0]
-    totalNumFrames = args.numberOfFrames[0]
-    downscaleBy = args.downscale[0]
+    totalFramesToExtract = args.numberOfFramesToExtract[0]
+    downscaleOnProcessing = args.downscaleProcessingImages[0]
+    downscaleOutput = args.downscaleOutputImage[0]
 
     faceDetModel = ""
     if args.dlib:
@@ -85,11 +87,8 @@ def main(close_up_model, logo_detection_model):
 
     try:
         if not os.path.exists(thumbnail_output):
-            os.makedirs(thumbnail_output)
+            os.mkdir(thumbnail_output)
 
-            for f in os.listdir(thumbnail_output):
-                print(f)
-                #os.remove(os.path.join(thumbnail_output, f))
     except OSError:
         print("Error: Couldn't create thumbnail_output directory")
         return
@@ -101,26 +100,29 @@ def main(close_up_model, logo_detection_model):
 
     if processFile:
         name, ext = os.path.splitext(destination)
-        if ext == ".ts":
-            create_thumbnail(name + ext, close_up_model, logo_detection_model, faceDetModel, runFaceDetection, runBrisque, runLogoDetection, close_up_threshold, brisque_threshold, cutStartByFrames, totalNumFrames)
+        if ext == ".ts" or ext == ".mp4":
+            create_thumbnail(name + ext, downscaleOutput, downscaleOnProcessing, close_up_model, logo_detection_model, faceDetModel, runFaceDetection, runBrisque, runLogoDetection, close_up_threshold, brisque_threshold, cutStartByFrames, totalFramesToExtract)
     elif processFolder:
 
         i = 0
         for f in os.listdir(destination):
-            if i >= num_videos:
-                return
+            #if i >= num_videos:
+            #    return
             name, ext = os.path.splitext(f)
-            if ext == ".ts":
-                create_thumbnail(destination + name + ext, downscaleBy, close_up_model, logo_detection_model, faceDetModel, runFaceDetection, runBrisque, runLogoDetection, close_up_threshold, brisque_threshold, cutStartByFrames, totalNumFrames)
+            print(name + ext)
+            if ext == ".ts" or ext == ".mp4":
+                create_thumbnail(destination + name + ext,downscaleOutput , downscaleOnProcessing, close_up_model, logo_detection_model, faceDetModel, runFaceDetection, runBrisque, runLogoDetection, close_up_threshold, brisque_threshold, cutStartByFrames, totalFramesToExtract)
                 i += 1
+    
         
 
-def create_thumbnail(video_path, downscaleBy, close_up_model, logo_detection_model, faceDetModel, runFaceDetection, runBrisque, runLogoDetection, close_up_threshold, brisque_threshold, cutStartByFrames, totalNumFrames):
+def create_thumbnail(video_path, downscaleOutput, downscaleOnProcessing, close_up_model, logo_detection_model, faceDetModel, runFaceDetection, runBrisque, runLogoDetection, close_up_threshold, brisque_threshold, cutStartByFrames, totalFramesToExtract):
     print("Finding thumbnail for: ")
     video_filename = video_path.split("/")[-1]
     frames_folder_outer = os.path.dirname(os.path.abspath(__file__)) + "/extractedFrames/"
     frames_folder = frames_folder_outer + video_filename.split(".")[0] + "_frames"
     # Read the video from specified path
+
     cam = cv2.VideoCapture(video_path)
     totalFrames = int(cam.get(cv2.CAP_PROP_FRAME_COUNT))
     if totalFrames < cutStartByFrames:
@@ -137,11 +139,14 @@ def create_thumbnail(video_path, downscaleBy, close_up_model, logo_detection_mod
     except OSError:
         print ('Error: Couldnt create directory')
         
-    
+    fps = cam.get(cv2.CAP_PROP_FPS)
+    duration = totalFrames/fps
+    print("Duration in sec: " + str(duration))
+    print("Number of frames: " + str(totalFrames))
     # frame
     currentframe = 0
     # frames to skip
-    frame_skip = (totalFrames-cutStartByFrames)//totalNumFrames
+    frame_skip = (totalFrames-cutStartByFrames)//totalFramesToExtract
     numFramesExtracted = 0
     while(True):
         # reading from frame
@@ -151,11 +156,11 @@ def create_thumbnail(video_path, downscaleBy, close_up_model, logo_detection_mod
         if currentframe <= cutStartByFrames:
             currentframe += 1
             continue
-        if currentframe % frame_skip == 0 and numFramesExtracted < totalNumFrames:
+        if currentframe % frame_skip == 0 and numFramesExtracted < totalFramesToExtract:
             # if video is still left continue creating images
             name = frames_folder + '/frames/frame' + str(currentframe) + '.jpg'
-            width = int(frame.shape[1] * downscaleBy)
-            height = int(frame.shape[0] * downscaleBy)
+            width = int(frame.shape[1] * downscaleOnProcessing)
+            height = int(frame.shape[0] * downscaleOnProcessing)
             dsize = (width, height)
 
             img = cv2.resize(frame, dsize) 
@@ -206,6 +211,12 @@ def create_thumbnail(video_path, downscaleBy, close_up_model, logo_detection_mod
         while(True):
             ret, frame = cam.read()
             if curFrame == frameNum:
+                if downscaleOutput != 1.0:
+                    width = int(frame.shape[1] * downscaleOutput)
+                    height = int(frame.shape[0] * downscaleOutput)
+                    dsize = (width, height)
+                    frame = cv2.resize(frame, dsize) 
+                
                 cv2.imwrite(thumbnail_output + newName, frame)
                 break
             curFrame += 1
@@ -214,6 +225,10 @@ def create_thumbnail(video_path, downscaleBy, close_up_model, logo_detection_mod
         cv2.destroyAllWindows()
         print("")
         print("Final thumbnail frame number: " + str(frameNum))
+        secInVid = (frameNum / totalFrames) * duration
+        print(video_filename)
+        print("second in video: " + str(secInVid))
+        print("____")
         try:
             shutil.rmtree(frames_folder_outer)
         except OSError as e:
@@ -223,7 +238,6 @@ def create_thumbnail(video_path, downscaleBy, close_up_model, logo_detection_mod
 
 def groupFrames(frames_folder, close_up_model, logo_detection_model, faceDetModel, runFaceDetection, runBrisque, runLogoDetection, close_up_threshold, brisque_threshold):
     
-    #frames_folder is your directory path as string
     test_data_generator = ImageDataGenerator(rescale=1./255)
     IMAGE_SIZE = 200
     TEST_SIZE = len(next(os.walk(frames_folder + "/frames"))[2]) 
@@ -248,18 +262,17 @@ def groupFrames(frames_folder, close_up_model, logo_detection_model, faceDetMode
     priority_images = [{} for x in range(4)]
 
     for index, probability in enumerate(probabilities):
-        print("")
-        print(test_generator.filenames[index])
-        print("close-up prediction score: " + str(probability))
+        #print("")
+        #print(test_generator.filenames[index])
+        #print("close-up prediction score: " + str(probability))
         image_path = frames_folder + "/" + test_generator.filenames[index]
         if image_path in logos:
-            print("Logo detected")
+
             priority_images[3][image_path] = probability
         elif probability > close_up_threshold:
             if runFaceDetection:
                 face_size = detect_faces(image_path, faceDetModel)
                 if face_size > 0:
-                    print("Face detected: " + str(face_size) + "px")
                     priority_images[0][image_path] = probability
                 else:
                     priority_images[1][image_path] = probability
@@ -298,7 +311,7 @@ def detect_faces(image, faceDetModel):
                 biggestFace = size
 
     elif faceDetModel == haarStr:
-        face_cascade = cv2.CascadeClassifier('haarcascade_frontalface_default.xml')
+        face_cascade = cv2.CascadeClassifier(haarXml)
         img = cv2.imread(image)
         gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
         faces = face_cascade.detectMultiScale(gray, 1.1, 4)
@@ -339,6 +352,14 @@ def above_zero_int(x):
     if x <= 0:
         raise argparse.ArgumentTypeError("%r not above zero"%(x,))
     return x
+
+def with_opencv(filename):
+    video = cv2.VideoCapture(filename)
+
+    duration = video.get(cv2.CAP_PROP_POS_MSEC)
+    frame_count = video.get(cv2.CAP_PROP_FRAME_COUNT)
+
+    return duration, frame_count
 
 if __name__ == "__main__":
     close_up_model = '/home/andrehus/egne_prosjekter/videoAndOutput/models/close_up_model.h5'
