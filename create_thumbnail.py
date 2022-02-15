@@ -1,25 +1,29 @@
 import cv2
 import os
-#from moviepy.editor import *
+import math
 from tensorflow import keras
 from keras.preprocessing.image import ImageDataGenerator
 import argparse
 from os.path import isfile, isdir
 import shutil
 import imquality.brisque as brisque
-#import PIL.Image
 import dlib
 import time
+from mtcnn.mtcnn import MTCNN
 
 folder_path = "/global/D1/projects/soccer_clipping/events-Allsvenskan2019-minus15-pluss25/"
 #video="/global/D1/projects/soccer_clipping/events-Allsvenskan2019-minus15-pluss25/akwaxywqi4qo3.ts"
 #folder_path = "/global/D1/projects/soccer_clipping/events-Eliteserien2019-minus15-pluss25/"
-haarXml = 'haarcascade_frontalface_default.xml'
-thumbnail_output = os.path.dirname(os.path.abspath(__file__)) + "/thumbnail_output/"
+
+current_path = os.path.dirname(os.path.abspath(__file__))
+
+haarXml = current_path + '/models/haarcascade_frontalface_default.xml'
+thumbnail_output = current_path + "/thumbnail_output/"
 
 #num_videos = 2
 haarStr = "haar"
 dlibStr = "dlib"
+mtcnn = "mtcnn"
 
 #The probability score the image classifying model gives, is depending on which class it is basing the score on.
 #It could be switched
@@ -33,31 +37,45 @@ def main(close_up_model, logo_detection_model):
     close_up_threshold = 0.75
     brisque_threshold = 35
     totalFramesToExtract = 50
-    #If one wants to configure framerate instead
-    frameRateExtract = None
-    cutStartByFrames = 650
+    faceDetModel = dlibStr
+    framerateExtract = None
+    fpsExtract = None
+    cutStartSeconds = 0
+    cutEndSeconds = 0
     downscaleOnProcessing = 0.5
     downscaleOutput = 1.0
+    annotationSecond = None
+    beforeAnnotationSecondsCut = None
+    afterAnnotationSecondsCut = None
 
     parser = argparse.ArgumentParser(description="Thumbnail generator")
     parser.add_argument("destination", nargs=1, help="Destination of the input to be processed. Can be file or folder")
-    group = parser.add_mutually_exclusive_group(required = True)
-    group.add_argument("-dlib", action='store_true', help="Dlib detection model is slower, but more presice.")
-    group.add_argument("-haar", action='store_true', help="Haar detection model is faster, but less precise")
+    faceGroup = parser.add_mutually_exclusive_group(required = False)
+    faceGroup.add_argument("-dlib", action='store_true', help="Dlib detection model is slow, but presice.")
+    faceGroup.add_argument("-haar", action='store_true', help="Haar detection model is fast, but unprecise.")
+    faceGroup.add_argument("-mtcnn", action='store_true', help="MTCNN detection model is slow, but precise.")
     
     #Flags that excludes models running
-    group.add_argument("-xf", "--xFaceDetection", default=True, action="store_false", help="Don't run the face detection")
+    faceGroup.add_argument("-xf", "--xFaceDetection", default=True, action="store_false", help="Don't run the face detection")
     parser.add_argument("-xb", "--xBrisque", default=True, action="store_false", help="Don't run Brisque")
     parser.add_argument("-xl", "--xLogoDetection", default=True, action="store_false", help="Don't run logo detection")
 
     #Flags fixing default values
     parser.add_argument("-cuthr", "--closeUpThreshold", type=restricted_float, default=[close_up_threshold], nargs=1, help="The threshold value for the close-up detection model. The value must be between 0 and 1. The default is: " + str(close_up_threshold))
     parser.add_argument("-brthr", "--brisqueThreshold", type=float, default=[brisque_threshold], nargs=1, help="The threshold value for the brisque model. The default is: " + str(brisque_threshold))
-    parser.add_argument("-csfr", "--cutStartFrames", type=positive_int, default=[cutStartByFrames], nargs=1, help="The number of frames to cut from start of the video. These will not be processed in the thumbnail selection. The default is: " + str(cutStartByFrames))
-    parser.add_argument("-nf", "--numberOfFramesToExtract", type=above_zero_int, default=[totalFramesToExtract], nargs=1, help="Number of frames to be extracted from the video for the thumbnail selection process. The default is: " + str(totalFramesToExtract))
+    parser.add_argument("-css", "--cutStartSeconds", type=positive_int, default=[cutStartSeconds], nargs=1, help="The number of seconds to cut from start of the video. These seconds of video will not be processed in the thumbnail selection. The default value is: " + str(cutStartSeconds))
+    parser.add_argument("-ces", "--cutEndSeconds", type=positive_int, default=[cutEndSeconds], nargs=1, help="The number of seconds to cut from the end of the video. These seconds of video will not be processed in the thumbnail selection. The default value is: " + str(cutEndSeconds))
+    numFrameExtractGroup = parser.add_mutually_exclusive_group(required = False)
+    numFrameExtractGroup.add_argument("-nfe", "--numberOfFramesToExtract", type=above_zero_int, default=[totalFramesToExtract], nargs=1, help="Number of frames to be extracted from the video for the thumbnail selection process. The default is: " + str(totalFramesToExtract))
+    numFrameExtractGroup.add_argument("-fre", "--framerateToExtract", type=restricted_float, default=[framerateExtract], nargs=1, help="The framerate wanted to be extracted from the video for the thumbnail selection process.")
+    numFrameExtractGroup.add_argument("-fpse", "--fpsExtract", type=above_zero_float, default=[fpsExtract], nargs=1, help="Number of frames per second to extract from the video for the thumbnail selection process.")
     parser.add_argument("-ds", "--downscaleProcessingImages", type=restricted_float, default=[downscaleOnProcessing], nargs=1, help="The value deciding how much the images to be processed should be downscaled. The default value is: " + str(downscaleOnProcessing))
     parser.add_argument("-dso", "--downscaleOutputImage", type=restricted_float, default=[downscaleOutput], nargs=1, help="The value deciding how much the output thumbnail image should be downscaled. The default value is: " + str(downscaleOutput))
-    
+    parser.add_argument("-as", "--annotationSecond", type=positive_int, default=[annotationSecond], nargs=1, help="The second the event is annotated to in the video.")
+    parser.add_argument("-bac", "--beforeAnnotationSecondsCut", type=positive_int, default=[beforeAnnotationSecondsCut], nargs=1, help="Seconds before the annotation to cut the frame extraction.")
+    parser.add_argument("-aac", "--afterAnnotationSecondsCut", type=positive_int, default=[afterAnnotationSecondsCut], nargs=1, help="Seconds after the annotation to cut the frame extraction.")
+
+
     args = parser.parse_args()
     destination = args.destination[0]
     runFaceDetection = args.xFaceDetection
@@ -65,18 +83,35 @@ def main(close_up_model, logo_detection_model):
     runLogoDetection = args.xLogoDetection
     close_up_threshold = args.closeUpThreshold[0]
     brisque_threshold = args.brisqueThreshold[0]
-    cutStartByFrames = args.cutStartFrames[0]
+    cutStartSeconds = args.cutStartSeconds[0]
+    cutEndSeconds = args.cutEndSeconds[0]
     totalFramesToExtract = args.numberOfFramesToExtract[0]
+    framerateExtract = args.framerateToExtract[0]
+    fpsExtract = args.fpsExtract[0]
+    if fpsExtract:
+        totalFramesToExtract = None
+        framerateExtract = None
+    if framerateExtract:
+        totalFramesToExtract = None
+        fpsExtract = None
+    if totalFramesToExtract:
+        framerateExtract = None
+        fpsExtract = None
     downscaleOnProcessing = args.downscaleProcessingImages[0]
     downscaleOutput = args.downscaleOutputImage[0]
-
-    faceDetModel = ""
+    annotationSecond = args.annotationSecond[0]
+    beforeAnnotationSecondsCut = args.beforeAnnotationSecondsCut[0]
+    afterAnnotationSecondsCut = args.afterAnnotationSecondsCut[0]
+    
     if args.dlib:
         faceDetModel = dlibStr
-        print("Using Dlib face detection model")
-    else:
+        print("Using Dlib face detection model.")
+    elif args.haar:
         faceDetModel = haarStr
-        print("Using Haar face detection model")
+        print("Using Haar face detection model.")
+    elif args.mtcnn:
+        faceDetModel = dlibStr
+        print("Using MTCNN face detection model.")
 
     processFolder = False
     processFile = False
@@ -109,7 +144,7 @@ def main(close_up_model, logo_detection_model):
     if processFile:
         name, ext = os.path.splitext(destination)
         if ext == ".ts" or ext == ".mp4":
-            create_thumbnail(name + ext, downscaleOutput, downscaleOnProcessing, close_up_model, logo_detection_model, faceDetModel, runFaceDetection, runBrisque, runLogoDetection, close_up_threshold, brisque_threshold, cutStartByFrames, totalFramesToExtract)
+            create_thumbnail(name + ext, downscaleOutput, downscaleOnProcessing, close_up_model, logo_detection_model, faceDetModel, runFaceDetection, runBrisque, runLogoDetection, close_up_threshold, brisque_threshold, cutStartSeconds, cutEndSeconds, totalFramesToExtract, fpsExtract, framerateExtract, annotationSecond, beforeAnnotationSecondsCut, afterAnnotationSecondsCut)
     elif processFolder:
 
         i = 0
@@ -119,24 +154,40 @@ def main(close_up_model, logo_detection_model):
             name, ext = os.path.splitext(f)
             print(name + ext)
             if ext == ".ts" or ext == ".mp4":
-                create_thumbnail(destination + name + ext,downscaleOutput , downscaleOnProcessing, close_up_model, logo_detection_model, faceDetModel, runFaceDetection, runBrisque, runLogoDetection, close_up_threshold, brisque_threshold, cutStartByFrames, totalFramesToExtract)
+                create_thumbnail(destination + name + ext,downscaleOutput , downscaleOnProcessing, close_up_model, logo_detection_model, faceDetModel, runFaceDetection, runBrisque, runLogoDetection, close_up_threshold, brisque_threshold, cutStartSeconds, cutEndSeconds, totalFramesToExtract, fpsExtract, framerateExtract, annotationSecond, beforeAnnotationSecondsCut, afterAnnotationSecondsCut)
                 
                 i += 1
 
     
         
 
-def create_thumbnail(video_path, downscaleOutput, downscaleOnProcessing, close_up_model, logo_detection_model, faceDetModel, runFaceDetection, runBrisque, runLogoDetection, close_up_threshold, brisque_threshold, cutStartByFrames, totalFramesToExtract):
+def create_thumbnail(video_path, downscaleOutput, downscaleOnProcessing, close_up_model, logo_detection_model, faceDetModel, runFaceDetection, runBrisque, runLogoDetection, close_up_threshold, brisque_threshold, cutStartSeconds, cutEndSeconds, totalFramesToExtract, fpsExtract, framerateExtract, annotationSecond, beforeAnnotationSecondsCut, afterAnnotationSecondsCut):
     video_filename = video_path.split("/")[-1]
     frames_folder_outer = os.path.dirname(os.path.abspath(__file__)) + "/extractedFrames/"
     frames_folder = frames_folder_outer + video_filename.split(".")[0] + "_frames"
     # Read the video from specified path
 
+
     cam = cv2.VideoCapture(video_path)
     totalFrames = int(cam.get(cv2.CAP_PROP_FRAME_COUNT))
-    if totalFrames < cutStartByFrames:
-        print("The starting cut frame doesn't exist")
-        return
+    fps = cam.get(cv2.CAP_PROP_FPS)
+
+    duration = totalFrames/fps
+
+    if annotationSecond:
+        if beforeAnnotationSecondsCut:
+            cutStartSeconds = annotationSecond - beforeAnnotationSecondsCut
+        if afterAnnotationSecondsCut:
+            cutEndSeconds = duration - (annotationSecond + afterAnnotationSecondsCut)
+            
+            
+    cutStartFrames = fps * cutStartSeconds
+    cutEndFrames = fps * cutEndSeconds
+
+
+    if totalFrames < cutStartFrames + cutEndSeconds:
+        print("All the frames are cut out")
+        return 
     try:
         # creating a folder for frames
         if not os.path.exists(frames_folder):
@@ -148,22 +199,32 @@ def create_thumbnail(video_path, downscaleOutput, downscaleOnProcessing, close_u
     except OSError:
         print ('Error: Couldnt create directory')
         
-    fps = cam.get(cv2.CAP_PROP_FPS)
-    duration = totalFrames/fps
+    remainingFrames = totalFrames - (cutStartFrames + cutEndFrames)
+    remainingSeconds = remainingFrames / fps
+
+    if fpsExtract:
+        totalFramesToExtract = math.floor(remainingSeconds * fpsExtract)
+    if framerateExtract:
+        totalFramesToExtract = math.floor(remainingFrames * framerateExtract)
+    
     #print("Duration in sec: " + str(duration))
     #print("Number of frames: " + str(totalFrames))
     # frame
     currentframe = 0
     # frames to skip
-    frame_skip = (totalFrames-cutStartByFrames)//totalFramesToExtract
+    frame_skip = (totalFrames-(cutStartFrames + cutEndFrames))//totalFramesToExtract
     numFramesExtracted = 0
-    
+    stopFrame = totalFrames-cutEndFrames
+    start = time.time()    
+    #cam.set(1, cutStartFrames)
     while(True):
         # reading from frame
         ret,frame = cam.read()
         if not ret:
             break
-        if currentframe <= cutStartByFrames:
+        if currentframe > stopFrame:
+            break
+        if currentframe <= cutStartFrames:
             currentframe += 1
             continue
         if currentframe % frame_skip == 0 and numFramesExtracted < totalFramesToExtract:
@@ -181,9 +242,8 @@ def create_thumbnail(video_path, downscaleOutput, downscaleOnProcessing, close_u
         currentframe += 1
     
     # Release all space and windows once done
-    cam.release()
-    cv2.destroyAllWindows()
-    
+    end = time.time()
+    times.append(end-start)
     priority_images = groupFrames(frames_folder, close_up_model, logo_detection_model ,faceDetModel, runFaceDetection, runBrisque, runLogoDetection, close_up_threshold, brisque_threshold)
     finalThumbnail = ""
     for priority in priority_images:
@@ -217,24 +277,21 @@ def create_thumbnail(video_path, downscaleOutput, downscaleOnProcessing, close_u
         newName = video_filename.split(".")[0] + "_thumbnail.jpg"
         imageName = finalThumbnail.split("/")[-1].split(".")[0]
         frameNum = int(imageName.replace("frame", ""))
-        cam = cv2.VideoCapture(video_path)
-        curFrame = 0
-        while(True):
-            ret, frame = cam.read()
-            if curFrame == frameNum:
-                if downscaleOutput != 1.0:
-                    width = int(frame.shape[1] * downscaleOutput)
-                    height = int(frame.shape[0] * downscaleOutput)
-                    dsize = (width, height)
-                    frame = cv2.resize(frame, dsize) 
+        #cam = cv2.VideoCapture(video_path)
+
+        cam.set(1, frameNum)
+        ret, frame = cam.read()
+        if downscaleOutput != 1.0:
+            width = int(frame.shape[1] * downscaleOutput)
+            height = int(frame.shape[0] * downscaleOutput)
+            dsize = (width, height)
+            frame = cv2.resize(frame, dsize) 
                 
-                cv2.imwrite(thumbnail_output + newName, frame)
-                
-                break
-            curFrame += 1
+        cv2.imwrite(thumbnail_output + newName, frame)
 
         cam.release()
         cv2.destroyAllWindows()
+
 
         #print("")
         #print("Final thumbnail frame number: " + str(frameNum))
@@ -243,7 +300,8 @@ def create_thumbnail(video_path, downscaleOutput, downscaleOnProcessing, close_u
         #print("second in video: " + str(secInVid))
         #print("____")
         try:
-            shutil.rmtree(frames_folder_outer)
+            #shutil.rmtree(frames_folder_outer)
+            pass
         except OSError as e:
             print("Error: %s - %s." % (e.filename, e.strerror))
         return
@@ -315,7 +373,7 @@ def predictBrisque(image_path):
     return brisqueScore
 
 def detect_faces(image, faceDetModel):
-    
+    print("DETECT")
     biggestFace = 0
 
     if faceDetModel == dlibStr:
@@ -338,11 +396,22 @@ def detect_faces(image, faceDetModel):
         img = cv2.imread(image)
         gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
         faces = face_cascade.detectMultiScale(gray, 1.1, 4)
-        biggestFace = 0
         for (x, y, w, h) in faces:
             if biggestFace < h:
                 biggestFace = h
 
+    elif faceDetModel == mtcnnStr:
+        detector = MTCNN()
+        img = cv2.imread(image)
+        faces = detector.detect_faces(img)
+        #Could grayscale
+
+        # to draw faces on image
+        for result in faces:
+            x, y, w, h = result['box']
+            size = h
+            if biggestFace < h:
+                biggestFace = h
     else:
         print("No face detection model in use")
 
@@ -356,6 +425,15 @@ def restricted_float(x):
 
     if x < 0.0 or x > 1.0:
         raise argparse.ArgumentTypeError("%r not in range [0.0, 1.0]"%(x,))
+    return x
+
+def above_zero_float(x):
+    try:
+        x = float(x)
+    except ValueError:
+        raise argparse.ArgumentTypeError("%r not a floating-point literal" % (x,))
+    if x <=0:
+        raise argparse.ArgumentTypeError("%r not above zero"%(x,))
     return x
 
 def positive_int(x):
@@ -378,8 +456,8 @@ def above_zero_int(x):
 
 
 if __name__ == "__main__":
-    close_up_model = os.path.dirname(os.path.abspath(__file__)) + '/models/close_up_model.h5'
-    logo_detection_model = os.path.dirname(os.path.abspath(__file__)) + '/models/logo_detection.h5'
+    close_up_model = current_path + '/models/close_up_model.h5'
+    logo_detection_model = current_path + '/models/logo_detection.h5'
     main(close_up_model, logo_detection_model)
     print("AVG time: " + str(sum(times)/37))
     print(times)

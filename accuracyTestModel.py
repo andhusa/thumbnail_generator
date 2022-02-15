@@ -12,16 +12,22 @@ import PIL.Image
 #All photos has to be in same folder and the name should tell the difference
 
 #logo detection model:
-model = keras.models.load_model('/home/andrehus/egne_prosjekter/videoAndOutput/models/logo_detection/logo_detection.h5')
+#model = keras.models.load_model('/home/andrehus/egne_prosjekter/videoAndOutput/models/logo_detection/logo_detection.h5')
+
+current_path = os.path.dirname(os.path.abspath(__file__))
+#logo detection model
+logo_detection = current_path + '/models/logo_detection.h5'
 
 #close up model:
-#model = keras.models.load_model('/home/andrehus/egne_prosjekter/videoAndOutput/models/close_up_model.h5')
-#model = keras.models.load_model('/home/andrehus/egne_prosjekter/videoAndOutput/models/close_up_model_2.h5')
+close_up = current_path + '/models/close_up_model.h5'
+
+#model = keras.models.load_model(close_up)
+model = keras.models.load_model(logo_detection)
 
 
 
 
-probabilityThr = 0.1
+probabilityThr = 0.05
 
 def main(folder):
     test_data_generator = ImageDataGenerator(rescale=1./255)
@@ -67,13 +73,14 @@ def main(folder):
     print("False positives: " + str(falseP))
     print("True negatives: " + str(trueN))
     print("False negatives: " + str(falseN))
-    print("Num cases: " + str(trueP + falseP + trueN + falseN))
+    numCases = trueP + falseP + trueN + falseN
+    print("Num cases: " + str(numCases))
     if (trueP + falseP == 0) or (trueP + falseN == 0):
         print("Can't divide by zero")
         return
     precision = trueP / (trueP + falseP)
     recall = trueP / (trueP + falseN)
-    accuracy = (trueP + trueN) / (trueP + trueN + falseP + trueN)
+    accuracy = (trueP + trueN) / numCases
     print("Probability threshold: " + str(probabilityThr))
     print("Precision: " + str(precision))
     print("Recall: " + str(recall))
@@ -174,6 +181,7 @@ def testImageQualityPredictor(fileName):
 
 def predictBrisque(image_path):
     img = cv2.imread(image_path)
+    print(img.shape)
     brisqueScore = brisque.score(img)
     #brisqueScore = 1
     print("")
@@ -192,15 +200,15 @@ def printAvgFileSizeFolder(folder):
 if __name__ == "__main__":
 
     #folder = "/global/D1/projects/soccer_clipping/closeUpSetStructured/test"
-    folder = "/global/D1/projects/soccer_clipping/AllsvenskanTestLogo2021Structured/test"
+    folder = "/global/D1/projects/soccer_clipping/AllsvenskanTestLogoStructured/test"
     main(folder)
 
     folder = "/global/D1/projects/soccer_clipping/events-Eliteserien2019-minus15-pluss25/"
     
     #Testing Brisque:
 
-    for f in os.listdir(folder):
-        if f.split('.')[-1] == 'ts':
-            testImageQualityPredictor(folder + f)
-            break
+    #for f in os.listdir(folder):
+    #    if f.split('.')[-1] == 'ts':
+    #        testImageQualityPredictor(folder + f)
+    #        break
 

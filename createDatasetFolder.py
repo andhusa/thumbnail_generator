@@ -21,7 +21,7 @@ import shutil
 
 def main():
     folder_path = "/global/D1/projects/soccer_clipping/closeUpSet"
-    folder_path = "/global/D1/projects/soccer_clipping/AllsvenskanTestLogo2021"
+    folder_path = "/global/D1/projects/soccer_clipping/AllsvenskanTestLogo"
 
     tempFolder = moveToTempFolder(folder_path)
     print(tempFolder)
