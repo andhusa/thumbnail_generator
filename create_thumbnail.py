@@ -1,6 +1,7 @@
 import cv2
 import os
 import math
+import numpy as np
 from tensorflow import keras
 from keras.preprocessing.image import ImageDataGenerator
 import argparse
@@ -18,12 +19,15 @@ folder_path = "/global/D1/projects/soccer_clipping/events-Allsvenskan2019-minus1
 current_path = os.path.dirname(os.path.abspath(__file__))
 
 haarXml = current_path + '/models/haarcascade_frontalface_default.xml'
+modelFile = current_path + "/models/res10_300x300_ssd_iter_140000.caffemodel"
+configFile = current_path + "/models/deploy.prototxt.txt"
 thumbnail_output = current_path + "/thumbnail_output/"
 
 #num_videos = 2
 haarStr = "haar"
 dlibStr = "dlib"
-mtcnn = "mtcnn"
+mtcnnStr = "mtcnn"
+dnnStr = "dnn"
 
 #The probability score the image classifying model gives, is depending on which class it is basing the score on.
 #It could be switched
@@ -54,6 +58,7 @@ def main(close_up_model, logo_detection_model):
     faceGroup.add_argument("-dlib", action='store_true', help="Dlib detection model is slow, but presice.")
     faceGroup.add_argument("-haar", action='store_true', help="Haar detection model is fast, but unprecise.")
     faceGroup.add_argument("-mtcnn", action='store_true', help="MTCNN detection model is slow, but precise.")
+    faceGroup.add_argument("-dnn", action='store_true', help="DNN detection model is fast and precise.")
     
     #Flags that excludes models running
     faceGroup.add_argument("-xf", "--xFaceDetection", default=True, action="store_false", help="Don't run the face detection")
@@ -110,8 +115,11 @@ def main(close_up_model, logo_detection_model):
         faceDetModel = haarStr
         print("Using Haar face detection model.")
     elif args.mtcnn:
-        faceDetModel = dlibStr
+        faceDetModel = mtcnnStr
         print("Using MTCNN face detection model.")
+    elif args.dnn:
+        faceDetModel = dnnStr
+        print("Using DNN face detection model.")
 
     processFolder = False
     processFile = False
@@ -352,7 +360,7 @@ def groupFrames(frames_folder, close_up_model, logo_detection_model, faceDetMode
             if runFaceDetection:
                 face_size = detect_faces(image_path, faceDetModel)
                 if face_size > 0:
-                    priority_images[0][image_path] = probability
+                    priority_images[0][image_path] = face_size
                 else:
                     priority_images[1][image_path] = probability
             else:
@@ -373,11 +381,8 @@ def predictBrisque(image_path):
     return brisqueScore
 
 def detect_faces(image, faceDetModel):
-    print("DETECT")
     biggestFace = 0
-
     if faceDetModel == dlibStr:
-
         detector = dlib.get_frontal_face_detector()
         img = cv2.imread(image)
         gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
@@ -412,6 +417,23 @@ def detect_faces(image, faceDetModel):
             size = h
             if biggestFace < h:
                 biggestFace = h
+
+    elif faceDetModel == dnnStr:
+        net = cv2.dnn.readNetFromCaffe(configFile, modelFile)
+        img = cv2.imread(image)
+        h, w = img.shape[:2]
+        blob = cv2.dnn.blobFromImage(cv2.resize(img, (300, 300)), 1.0, (300, 300), (104.0, 117.0, 123.0))
+        net.setInput(blob)
+        faces = net.forward()
+        for i in range(faces.shape[2]):
+            confidence = faces[0, 0, i, 2]
+            if confidence > 0.5: 
+                box = faces[0, 0, i, 3:7] * np.array([w, h, w, h])
+                (x, y, x1, y1) = box.astype("int")
+                height = y1 - y
+                if biggestFace < height:
+                    biggestFace = height
+
     else:
         print("No face detection model in use")
 
