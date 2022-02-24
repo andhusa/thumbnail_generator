@@ -279,9 +279,10 @@ def create_thumbnail(video_path, downscaleOutput, downscaleOnProcessing, close_u
 
         for key in priority:
             score = get_blur_degree(key)
+            '''
             if score > blur_threshold:
                 excluded.append(key)
-
+            '''
             '''
             if finalThumbnail == "":
                 bestScore = score
@@ -301,13 +302,13 @@ def create_thumbnail(video_path, downscaleOutput, downscaleOnProcessing, close_u
                 finalThumbnail = key
                 excluded.append(key)
             '''
-
+    '''
     print("Excluded:")
     for exclude in excluded:
         print(exclude)
         img = cv2.imread(exclude)
         cv2.imwrite(excluded_images + video_filename.split(".")[0] + "_" + exclude.split("/")[-1], img)
-        
+    '''    
         '''
         if runBrisque:
             bestScore = 0
