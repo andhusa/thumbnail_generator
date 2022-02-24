@@ -20,14 +20,16 @@ logo_detection = current_path + '/models/logo_detection.h5'
 
 #close up model:
 close_up = current_path + '/models/close_up_model.h5'
+close_up = '/home/andrehus/image_classifier/close_up_model_3_downscaled.h5'
+#close_up = '/home/andrehus/image_classifier/close_up_model_3.h5'
 
-#model = keras.models.load_model(close_up)
-model = keras.models.load_model(logo_detection)
+model = keras.models.load_model(close_up)
+#model = keras.models.load_model(logo_detection)
 
 
 
 
-probabilityThr = 0.05
+probabilityThr = 0.5
 
 def main(folder):
     test_data_generator = ImageDataGenerator(rescale=1./255)
@@ -47,7 +49,7 @@ def main(folder):
     trueN = 0
     falseN = 0
     for index, probability in enumerate(probabilities):
-        #probability = 1 - probability
+        probability = 1 - probability
         image_path = folder + "/" + test_generator.filenames[index]
         fileName = test_generator.filenames[index].split("/")[-1]
         className = fileName.split("_")[0]
@@ -199,8 +201,8 @@ def printAvgFileSizeFolder(folder):
 
 if __name__ == "__main__":
 
-    #folder = "/global/D1/projects/soccer_clipping/closeUpSetStructured/test"
-    folder = "/global/D1/projects/soccer_clipping/AllsvenskanTestLogoStructured/test"
+    folder = "/global/D1/projects/soccer_clipping/closeUpSetDownscaledStructured/test"
+    #folder = "/global/D1/projects/soccer_clipping/AllsvenskanTestLogoStructured/test"
     main(folder)
 
     folder = "/global/D1/projects/soccer_clipping/events-Eliteserien2019-minus15-pluss25/"

@@ -22,17 +22,18 @@ import shutil
 def main():
     folder_path = "/global/D1/projects/soccer_clipping/closeUpSet"
     folder_path = "/global/D1/projects/soccer_clipping/AllsvenskanTestLogo"
+    folder_path = "/global/D1/projects/soccer_clipping/closeUpSetDownscaled"
 
     tempFolder = moveToTempFolder(folder_path)
     print(tempFolder)
-    #create_dataset(tempFolder, "training", 0.8)  
-    #create_dataset(tempFolder, "validation",0.75)
+    create_dataset(tempFolder, "training", 0.8)  
+    create_dataset(tempFolder, "validation",0.75)
     create_dataset(tempFolder, "test", 1)
 
     outerFolder = tempFolder + "../"
 
-    #sort_category(outerFolder, "training")
-    #sort_category(outerFolder, "validation")
+    sort_category(outerFolder, "training")
+    sort_category(outerFolder, "validation")
     sort_category(outerFolder, "test")
 
     os.rmdir(tempFolder)

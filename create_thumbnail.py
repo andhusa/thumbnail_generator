@@ -22,6 +22,7 @@ haarXml = current_path + '/models/haarcascade_frontalface_default.xml'
 modelFile = current_path + "/models/res10_300x300_ssd_iter_140000.caffemodel"
 configFile = current_path + "/models/deploy.prototxt.txt"
 thumbnail_output = current_path + "/thumbnail_output/"
+excluded_images = current_path + "/excluded_images/"
 
 #num_videos = 2
 haarStr = "haar"
@@ -138,9 +139,11 @@ def main(close_up_model, logo_detection_model):
     try:
         if not os.path.exists(thumbnail_output):
             os.mkdir(thumbnail_output)
+        if not os.path.exists(excluded_images):
+            os.mkdir(excluded_images)
 
     except OSError:
-        print("Error: Couldn't create thumbnail_output directory")
+        print("Error: Couldn't create thumbnail output directory")
         return
     
     close_up_model = keras.models.load_model(close_up_model)
@@ -254,6 +257,8 @@ def create_thumbnail(video_path, downscaleOutput, downscaleOnProcessing, close_u
     times.append(end-start)
     priority_images = groupFrames(frames_folder, close_up_model, logo_detection_model ,faceDetModel, runFaceDetection, runBrisque, runLogoDetection, close_up_threshold, brisque_threshold)
     finalThumbnail = ""
+    excluded = []
+
     for priority in priority_images:
         if finalThumbnail != "":
             break
@@ -262,7 +267,48 @@ def create_thumbnail(video_path, downscaleOutput, downscaleOnProcessing, close_u
         #print("Frames in group: ")
         #for key in priority:
         #    print(key.split("/")[-1])
+        bestScore = 0
+        blur_threshold = 0.6
+        '''
+        for key in priority:
+            score = get_blur_degree(key)
+            print(key)
+            print(score)
+            print("")
+        '''
+
+        for key in priority:
+            score = get_blur_degree(key)
+            if score > blur_threshold:
+                excluded.append(key)
+
+            '''
+            if finalThumbnail == "":
+                bestScore = score
+                finalThumbnail = key
+                excluded.append(key)
+            '''
+            if score < blur_threshold:
+                #finalThumbnail = key
+                brisqueScore = predictBrisque(key)
+                if brisqueScore < brisque_threshold:
+                    finalThumbnail = key
+                    break
+                
+            '''
+            if score < bestScore:
+                bestScore = score
+                finalThumbnail = key
+                excluded.append(key)
+            '''
+
+    print("Excluded:")
+    for exclude in excluded:
+        print(exclude)
+        img = cv2.imread(exclude)
+        cv2.imwrite(excluded_images + video_filename.split(".")[0] + "_" + exclude.split("/")[-1], img)
         
+        '''
         if runBrisque:
             bestScore = 0
             for key in priority:
@@ -280,7 +326,7 @@ def create_thumbnail(video_path, downscaleOutput, downscaleOnProcessing, close_u
             for key in priority:
                 finalThumbnail = key
                 break
-        
+        '''
     if finalThumbnail != "":
         newName = video_filename.split(".")[0] + "_thumbnail.jpg"
         imageName = finalThumbnail.split("/")[-1].split(".")[0]
@@ -379,6 +425,13 @@ def predictBrisque(image_path):
     #print("Brisque score:")
     #print(brisqueScore)
     return brisqueScore
+
+def get_blur_degree(image_file, sv_num=10):
+    img = cv2.imread(image_file,cv2.IMREAD_GRAYSCALE)
+    u, s, v = np.linalg.svd(img)
+    top_sv = np.sum(s[0:sv_num])
+    total_sv = np.sum(s)
+    return top_sv/total_sv
 
 def detect_faces(image, faceDetModel):
     biggestFace = 0
