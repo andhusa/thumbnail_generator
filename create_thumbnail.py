@@ -295,21 +295,22 @@ def create_thumbnail(video_path, downscaleOutput, downscaleOnProcessing, close_u
                 if brisqueScore < brisque_threshold:
                     finalThumbnail = key
                     break
-                
+            
             '''
             if score < bestScore:
                 bestScore = score
                 finalThumbnail = key
                 excluded.append(key)
             '''
-    '''
+    
     print("Excluded:")
+    '''
     for exclude in excluded:
         print(exclude)
         img = cv2.imread(exclude)
         cv2.imwrite(excluded_images + video_filename.split(".")[0] + "_" + exclude.split("/")[-1], img)
-    '''    
-        '''
+    ''' 
+    '''
         if runBrisque:
             bestScore = 0
             for key in priority:
@@ -327,7 +328,7 @@ def create_thumbnail(video_path, downscaleOutput, downscaleOnProcessing, close_u
             for key in priority:
                 finalThumbnail = key
                 break
-        '''
+    '''
     if finalThumbnail != "":
         newName = video_filename.split(".")[0] + "_thumbnail.jpg"
         imageName = finalThumbnail.split("/")[-1].split(".")[0]
