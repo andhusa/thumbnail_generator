@@ -45,8 +45,6 @@ def generate():
 	runIQAStr = "-xi" if not runIQA.get() else "-brthr " + brisque.get()
 	runLogoDetectionStr = "-xl" if not runLogoDetection.get() else ""
 	runFaceDetectionStr = "-xf" if not runFaceDetection.get() else "-" + faceVariable.get()
-	#e1.delete(0, tk.END)
-	#e2.delete(0, tk.END)
 	nbytes = 4096
 	hostname = 'dnat.simula.no'
 	port = 60441
@@ -86,12 +84,8 @@ def generate():
 	
 
 def open_file():
-	#master.withdraw() # we don't want a full GUI, so keep the root window from appearing
-	video_file = askopenfilename() # show an "Open" dialog box and return the path to the selected file
+	video_file = askopenfilename()
 	video_file_text.set(video_file)
-	#generate_button["state"] = NORMAL
-	#generate_button.config(state='normal')
-	#generate_button_state.set('normal')
 	fileName.delete(0, 'end')
 	fileName.insert(0, video_file)
 def display_face_det_models():
@@ -163,12 +157,10 @@ runBlurDetection = BooleanVar(value=True)
 runCloseUpDetection = BooleanVar(value=True)
 video_file_text = StringVar(value="No file selected					")
 generate_button_state = StringVar(value='disabled')
-#pre_processing = tk.Label(master, text="Step 1. Pre-processing", font=('Arial', 20), pady=20).grid(row=0)
 pre_processing = LabelFrame(master, text="Step 1. Pre-processing", font=('Arial', 20), padx=10, pady=10)
 pre_processing.grid( padx=10, pady=10)
 trimming = LabelFrame(pre_processing, text="1a. Trimming", padx=10, pady=10)
 trimming.grid(padx=10, pady=10, sticky=tk.W)
-#trimming = tk.Label(trimming, text="", font=('Arial', 10), pady=10).grid(row=1)
 tk.Label(trimming, text= "Annotation mark").grid(sticky=tk.W)
 tk.Label(trimming, text= "Drop frames X seconds before the annotation").grid(sticky=tk.W)
 tk.Label(trimming, text= "Drop frames Y seconds after the annotation").grid(sticky=tk.W)
@@ -178,64 +170,49 @@ down_sampling = LabelFrame(pre_processing, text="1b. Down-sampling", padx=10, pa
 down_sampling.grid(padx=10, pady=10, sticky=tk.W)
 down_sampling_var = IntVar()
 down_sampling_var.set(1)
-#down_sampling = tk.Label(pre_processing, text="1b. Down-sampling", font=('Arial', 10), pady=10).grid(row=7)
 tk.Radiobutton(down_sampling, text="Number of Frames to extract", variable=down_sampling_var, value=1, command=disable_other_entries_downsampling).grid(sticky=tk.W)
 tk.Radiobutton(down_sampling, text="Downsampling ratio: value between [0,1]", variable=down_sampling_var, value=2, command=disable_other_entries_downsampling).grid(sticky=tk.W)
 tk.Radiobutton(down_sampling, text="Frame per second", variable=down_sampling_var, value=3, command=disable_other_entries_downsampling).grid(sticky=tk.W)
-#tk.Label(down_sampling, text="Number of Frames to Extract").grid(sticky=tk.W)
-#tk.Label(down_sampling, text="Downsampling ratio: value between [0,1]").grid(sticky=tk.W)
-#tk.Label(down_sampling, text="Frame per second").grid(sticky=tk.W)
 down_scaling = LabelFrame(pre_processing, text="1c. Down-scaling", padx=10, pady=10)
 down_scaling.grid(padx=10, pady=10, sticky=tk.W)
-#down_scaling = tk.Label(pre_processing, text="1c. Down-scaling", font=('Arial', 10), pady=10).grid(row=11)
 tk.Label(down_scaling, text="For internal processing (%)").grid(sticky=tk.W)
 tk.Label(down_scaling, text="For output image (%)").grid(sticky=tk.W)
 
 content_analysis = LabelFrame(master, text="Step 2. Content Analysis", font=('Arial', 20), padx=10, pady=10)
 content_analysis.grid(row=0, column=3, padx=10, pady=10, sticky=tk.N)
-#content_analysis = tk.Label(master, text="Step 2. Content Analysis", font=('Arial', 20), pady=20)
-#content_analysis.grid(row=0, column=3, padx=10, pady=10)
 logo_detection = LabelFrame(content_analysis, text="2a. Logo Detection", padx=10, pady=10)
 logo_detection.grid(padx=10, pady=10, sticky=tk.W)
 logo = tk.Checkbutton(logo_detection, command=display_logo_det_models, text="Run Logo Detection", variable=runLogoDetection)
 tk.Label(logo_detection, text="Logo Detection Model").grid(row=1, sticky=tk.W)
 tk.Label(logo_detection, text="Logo detection threshold (%)").grid(row=2, sticky=tk.W)
-#logo_detection = tk.Label(content_analysis, text="2a. Logo Detection", font=('Arial', 10), pady=10).grid(row=1, column=3)
 close_up_shot_detection = LabelFrame(content_analysis, text="2b. Close-up Shot Detection", padx=10, pady=10)
 close_up_shot_detection.grid(padx=10, pady=10)
-#close_up_shot_detection = tk.Label(content_analysis, text="2b. Close-up Shot Detection", font=('Arial', 10), pady=10).grid(row=4, column=3)
 runClose = tk.Checkbutton(close_up_shot_detection, command=display_close_up,text="Run Close-up Shot Detection", variable=runCloseUpDetection)
 tk.Label(close_up_shot_detection, text="Close-up shot detection model").grid(row=1, sticky=tk.W)
 tk.Label(close_up_shot_detection, text="Close-up detection threshold (%)").grid(row=2, sticky=tk.W)
-#.grid(row=5, column=3)
 face_detection = LabelFrame(content_analysis, text="2c. Face Detection", padx=10, pady=10)
 face_detection.grid(padx=10, pady=10, sticky=tk.W)
 runFace = tk.Checkbutton(face_detection, command=display_face_det_models, text="Run Face Detection", variable=runFaceDetection)
-#face_detection = tk.Label(content_analysis,text="2c. Face Detection", font=('Arial', 10), pady=10).grid(row=6, column=3)
 tk.Label(face_detection, text="Face Detection Model").grid(row=1, sticky=tk.W)
-#.grid(row=8, column=3)
 
 image_quality_analysis = LabelFrame(master, text="Step 3. Image Quality Analysis", font=('Arial', 20), padx=10, pady=10)
 image_quality_analysis.grid(row=0, column=5, padx=10, pady=10, sticky=tk.N)
-#image_quality_analysis = tk.Label(master, text="Step 3. Image Quality Analysis", font=('Arial', 20), pady=20).grid(row=0, column=5)
 image_quality_prediction = LabelFrame(image_quality_analysis, text="3a. Image Quality Prediction", padx=10, pady=10)
 image_quality_prediction.grid(padx=10, pady=10, sticky=tk.W)
-#image_quality_prediction = tk.Label(image_quality_analysis, text="3a. Image Quality Prediction", font=('Arial', 10), pady=10).grid(row=1, column=5)
 tk.Label(image_quality_prediction, text="Image quality prediction model").grid(row=1, sticky=tk.W)
 
 tk.Label(image_quality_prediction, text="BRISQUE threshold value").grid(row=2, sticky=tk.W)
-#.grid(row=3, column=5)
 blur_detection = LabelFrame(image_quality_analysis, text="3b. Blur Detection", padx=10, pady=10)
 blur_detection.grid(padx=10, pady=10, sticky=tk.W)
 tk.Label(blur_detection, text="Blur Detection Model").grid(row=1, sticky=tk.W)
-#blur_detection = tk.Label(image_quality_analysis, text="3b. Blur Detection", font=('Arial', 10), pady=10).grid(row=4, column=5)
 tk.Label(blur_detection, text="Blur score threshold").grid(row=2, sticky=tk.W)
-#.grid(row=6, column=5)
 
 file_processing = LabelFrame(master, padx=10, pady=10)
 file_processing.grid(row=1, column=5, padx=10, pady=10, sticky=tk.N)
 video_file_text_label = tk.Label(file_processing, textvariable=video_file_text, font=('Arial', 8)).grid(sticky=tk.W, column=1)
-generate_button = tk.Button(file_processing, text='Generate', command=generate).grid(sticky=tk.W)
+#generate_button = tk.Button(file_processing, text='Generate', command=generate).grid(sticky=tk.W)
+generate_button = tk.Button(file_processing, text='Generate').grid(sticky=tk.W)
+
 
 am = tk.Entry(trimming, width=5)
 ba = tk.Entry(trimming, width=5)
