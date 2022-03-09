@@ -8,6 +8,7 @@ from os.path import isdir, isfile
 import shutil
 import imquality.brisque as brisque
 import PIL.Image
+import numpy as np
 
 #All photos has to be in same folder and the name should tell the difference
 
@@ -17,14 +18,14 @@ import PIL.Image
 current_path = os.path.dirname(os.path.abspath(__file__))
 #logo detection model
 logo_detection = current_path + '/models/logo_detection.h5'
-
+logo_detection = '/home/andrehus/image_classifier/logos_soccernet_reduced.h5'
 #close up model:
 close_up = current_path + '/models/close_up_model.h5'
 close_up = '/home/andrehus/image_classifier/close_up_model_3_downscaled.h5'
 #close_up = '/home/andrehus/image_classifier/close_up_model_3.h5'
 
-model = keras.models.load_model(close_up)
-#model = keras.models.load_model(logo_detection)
+#model = keras.models.load_model(close_up)
+model = keras.models.load_model(logo_detection)
 
 
 
@@ -49,12 +50,12 @@ def main(folder):
     trueN = 0
     falseN = 0
     for index, probability in enumerate(probabilities):
-        probability = 1 - probability
+        #probability = 1 - probability
         image_path = folder + "/" + test_generator.filenames[index]
         fileName = test_generator.filenames[index].split("/")[-1]
         className = fileName.split("_")[0]
-        #print(className)
-        #print(probability)
+        print(className)
+        print(probability)
         if probability > probabilityThr:
             if className == "closeUp" or className == "Logo":
                 trueP += 1
@@ -199,14 +200,83 @@ def printAvgFileSizeFolder(folder):
     avgSize = sum(sizes) / len(sizes)
     print("Avg file size," + folder.split('/')[-1] +" is: " + str(avgSize))
 
+def test_blur(positive_folder, negativeFolder):
+    max_cases_per_folder = 1000
+    positive_scores = []
+    negative_scores = []
+    blur_threshold = 0.7
+    tp = 0
+    fp = 0
+    tn = 0
+    fn = 0
+    i = 0
+    for filename in os.listdir(positive_folder):
+        if i > max_cases_per_folder:
+            break
+        name, ext = os.path.splitext(filename)
+        if ext == ".jpg" or ext == ".png":
+            i += 1
+            score = get_blur_degree(positive_folder + filename)
+            print(score)
+            if score > blur_threshold:
+                tp += 1
+            else:
+                fn += 1
+            positive_scores.append(score)
+    i = 0
+    for filename in os.listdir(negativeFolder):
+        if i > max_cases_per_folder:
+            break
+        name, ext = os.path.splitext(filename)
+        if ext == ".jpg" or ext == ".png":
+            i += 1
+            score = get_blur_degree(negativeFolder + filename)
+            print(score)
+            if score > blur_threshold:
+                fp += 1
+            else:
+                tn += 1
+            negative_scores.append(score)
+    positive_scores_mean = sum(positive_scores) / len(positive_scores)
+    negative_scores_mean = sum(negative_scores) / len(negative_scores)
+    print("Positive scores mean: " + str(positive_scores_mean))
+    print("Negative scores mean: " + str(negative_scores_mean))
+    print("True positives: " + str(tp))
+    print("False positives: " + str(fp))
+    print("True negatives: " + str(tn))
+    print("False negatives: " + str(fn))
+    numCases = tp + fp + tn + fn
+    print("Num cases: " + str(numCases))
+    if (tp + fp == 0) or (tp + fn == 0):
+        print("Can't divide by zero")
+        return
+    precision = tp / (tp + fp)
+    recall = tp / (tp + fn)
+    accuracy = (tp + tn) / numCases
+    print("Probability threshold: " + str(blur_threshold))
+    print("Precision: " + str(precision))
+    print("Recall: " + str(recall))
+    print("Accuracy: " + str(accuracy))
+
+def get_blur_degree(image_file, sv_num=10):
+    img = cv2.imread(image_file,cv2.IMREAD_GRAYSCALE)
+    u, s, v = np.linalg.svd(img)
+    top_sv = np.sum(s[0:sv_num])
+    total_sv = np.sum(s)
+    return top_sv/total_sv
+
 if __name__ == "__main__":
 
     folder = "/global/D1/projects/soccer_clipping/closeUpSetDownscaledStructured/test"
-    #folder = "/global/D1/projects/soccer_clipping/AllsvenskanTestLogoStructured/test"
+    folder = "/global/D1/projects/soccer_clipping/AllsvenskanTestLogoStructured/test"
     main(folder)
 
     folder = "/global/D1/projects/soccer_clipping/events-Eliteserien2019-minus15-pluss25/"
-    
+    positive_folder = "/global/D1/projects/soccer_clipping/Eliteserien/Test/Logo/"
+    negative_folder = "/global/D1/projects/soccer_clipping/Eliteserien/Test/Background/"
+    positive_folder = "/global/D1/projects/soccer_clipping/SoccerNetLogos/Test/Background/"
+    negative_folder = "/global/D1/projects/soccer_clipping/SoccerNetLogos/Test/Logo/"
+    #test_blur(positive_folder, negative_folder)
     #Testing Brisque:
 
     #for f in os.listdir(folder):
