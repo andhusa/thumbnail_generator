@@ -35,7 +35,6 @@ dnnStr = "dnn"
 close_up_model_inverted = False
 
 runCloseUpDetection = True
-times = []
 
 def main(close_up_model, logo_detection_model):
     #Default values
@@ -61,7 +60,7 @@ def main(close_up_model, logo_detection_model):
     faceGroup.add_argument("-haar", action='store_true', help="Haar detection model is fast, but unprecise.")
     faceGroup.add_argument("-mtcnn", action='store_true', help="MTCNN detection model is slow, but precise.")
     faceGroup.add_argument("-dnn", action='store_true', help="DNN detection model is fast and precise.")
-    
+
     #Flags that excludes models running
     faceGroup.add_argument("-xf", "--xFaceDetection", default=True, action="store_false", help="Don't run the face detection")
     parser.add_argument("-xi", "--xIQA", default=True, action="store_false", help="Don't run image quality prediction")
@@ -111,7 +110,7 @@ def main(close_up_model, logo_detection_model):
     annotationSecond = args.annotationSecond[0]
     beforeAnnotationSecondsCut = args.beforeAnnotationSecondsCut[0]
     afterAnnotationSecondsCut = args.afterAnnotationSecondsCut[0]
-    
+
     if args.dlib:
         faceDetModel = dlibStr
         print("Using Dlib face detection model.")
@@ -136,7 +135,7 @@ def main(close_up_model, logo_detection_model):
         processFile = True
         print("isfile")
     else:
-        print("Error: The input destination was neither file or directory") 
+        print("Error: The input destination was neither file or directory")
         return
 
     try:
@@ -148,17 +147,17 @@ def main(close_up_model, logo_detection_model):
     except OSError:
         print("Error: Couldn't create thumbnail output directory")
         return
-    
+
     if staticThumbnailSec:
         get_static(destination, staticThumbnailSec, downscaleOutput, thumbnail_output)
         return
-    
+
     close_up_model = keras.models.load_model(close_up_model)
-    
+
 
     if runLogoDetection:
         logo_detection_model = keras.models.load_model(logo_detection_model)
-    
+
     if processFile:
         name, ext = os.path.splitext(destination)
         if ext == ".ts" or ext == ".mp4":
@@ -173,11 +172,11 @@ def main(close_up_model, logo_detection_model):
             print(name + ext)
             if ext == ".ts" or ext == ".mp4":
                 create_thumbnail(destination + name + ext,downscaleOutput , downscaleOnProcessing, close_up_model, logo_detection_model, faceDetModel, runFaceDetection, runIQA, runLogoDetection, close_up_threshold, brisque_threshold, cutStartSeconds, cutEndSeconds, totalFramesToExtract, fpsExtract, framerateExtract, annotationSecond, beforeAnnotationSecondsCut, afterAnnotationSecondsCut)
-                
+
                 i += 1
 
-    
-        
+
+
 
 def create_thumbnail(video_path, downscaleOutput, downscaleOnProcessing, close_up_model, logo_detection_model, faceDetModel, runFaceDetection, runIQA, runLogoDetection, close_up_threshold, brisque_threshold, cutStartSeconds, cutEndSeconds, totalFramesToExtract, fpsExtract, framerateExtract, annotationSecond, beforeAnnotationSecondsCut, afterAnnotationSecondsCut):
     video_filename = video_path.split("/")[-1]
@@ -197,26 +196,26 @@ def create_thumbnail(video_path, downscaleOutput, downscaleOnProcessing, close_u
             cutStartSeconds = annotationSecond - beforeAnnotationSecondsCut
         if afterAnnotationSecondsCut:
             cutEndSeconds = duration - (annotationSecond + afterAnnotationSecondsCut)
-            
-            
+
+
     cutStartFrames = fps * cutStartSeconds
     cutEndFrames = fps * cutEndSeconds
 
 
     if totalFrames < cutStartFrames + cutEndFrames:
         print("All the frames are cut out")
-        return 
+        return
     try:
         # creating a folder for frames
         if not os.path.exists(frames_folder):
             os.makedirs(frames_folder)
             os.makedirs(frames_folder + "/frames")
             print("created folder: " + frames_folder + "/frames")
-    
+
     # if not created then raise error
     except OSError:
         print ('Error: Couldnt create directory')
-        
+
     remainingFrames = totalFrames - (cutStartFrames + cutEndFrames)
     remainingSeconds = remainingFrames / fps
 
@@ -224,7 +223,7 @@ def create_thumbnail(video_path, downscaleOutput, downscaleOnProcessing, close_u
         totalFramesToExtract = math.floor(remainingSeconds * fpsExtract)
     if framerateExtract:
         totalFramesToExtract = math.floor(remainingFrames * framerateExtract)
-    
+
     #print("Duration in sec: " + str(duration))
     #print("Number of frames: " + str(totalFrames))
     # frame
@@ -233,8 +232,6 @@ def create_thumbnail(video_path, downscaleOutput, downscaleOnProcessing, close_u
     frame_skip = (totalFrames-(cutStartFrames + cutEndFrames))//totalFramesToExtract
     numFramesExtracted = 0
     stopFrame = totalFrames-cutEndFrames
-    start = time.time()    
-    #cam.set(1, cutStartFrames)
     while(True):
         # reading from frame
         ret,frame = cam.read()
@@ -252,16 +249,14 @@ def create_thumbnail(video_path, downscaleOutput, downscaleOnProcessing, close_u
             height = int(frame.shape[0] * downscaleOnProcessing)
             dsize = (width, height)
             img = cv2.resize(frame, dsize)
-        
+
             cv2.imwrite(name, img)
             numFramesExtracted += 1
             # increasing counter so that it will
             # show how many frames are created
         currentframe += 1
-    
+
     # Release all space and windows once done
-    end = time.time()
-    times.append(end-start)
     priority_images = groupFrames(frames_folder, close_up_model, logo_detection_model ,faceDetModel, runFaceDetection, runIQA, runLogoDetection, close_up_threshold, brisque_threshold)
     finalThumbnail = ""
     excluded = []
@@ -286,10 +281,10 @@ def create_thumbnail(video_path, downscaleOutput, downscaleOnProcessing, close_u
 
         for key in priority:
             score = get_blur_degree(key)
-            
+
             #if score > blur_threshold:
             #    excluded.append(key)
-            
+
             '''
             if finalThumbnail == "":
                 bestScore = score
@@ -302,7 +297,7 @@ def create_thumbnail(video_path, downscaleOutput, downscaleOnProcessing, close_u
                 if brisqueScore < brisque_threshold:
                     finalThumbnail = key
                     break
-            
+
             '''
             if score < bestScore:
                 bestScore = score
@@ -311,11 +306,11 @@ def create_thumbnail(video_path, downscaleOutput, downscaleOnProcessing, close_u
             '''
     '''
     print("Excluded:")
-    
+
     for exclude in excluded:
         print(exclude)
         img = cv2.imread(exclude)
-        cv2.imwrite(excluded_images + video_filename.split(".")[0] + "_" + exclude.split("/")[-1], img) 
+        cv2.imwrite(excluded_images + video_filename.split(".")[0] + "_" + exclude.split("/")[-1], img)
     '''
     '''
         if runIQA:
@@ -348,8 +343,8 @@ def create_thumbnail(video_path, downscaleOutput, downscaleOnProcessing, close_u
             width = int(frame.shape[1] * downscaleOutput)
             height = int(frame.shape[0] * downscaleOutput)
             dsize = (width, height)
-            frame = cv2.resize(frame, dsize) 
-                
+            frame = cv2.resize(frame, dsize)
+
         cv2.imwrite(thumbnail_output + newName, frame)
 
         cam.release()
@@ -364,7 +359,7 @@ def create_thumbnail(video_path, downscaleOutput, downscaleOnProcessing, close_u
         #print("____")
         try:
             shutil.rmtree(frames_folder_outer)
-            
+
         except OSError as e:
             print("Error: %s - %s." % (e.filename, e.strerror))
         return
@@ -373,27 +368,27 @@ def create_thumbnail(video_path, downscaleOutput, downscaleOnProcessing, close_u
 def groupFrames(frames_folder, close_up_model, logo_detection_model, faceDetModel, runFaceDetection, runIQA, runLogoDetection, close_up_threshold, brisque_threshold):
     test_data_generator = ImageDataGenerator(rescale=1./255)
     IMAGE_SIZE = 200
-    TEST_SIZE = len(next(os.walk(frames_folder + "/frames"))[2]) 
+    TEST_SIZE = len(next(os.walk(frames_folder + "/frames"))[2])
     print("TEST SIZE: " + str(TEST_SIZE))
     IMAGE_WIDTH, IMAGE_HEIGHT = IMAGE_SIZE, IMAGE_SIZE
     test_generator = test_data_generator.flow_from_directory(
             frames_folder,
             target_size=(IMAGE_WIDTH, IMAGE_HEIGHT),
             batch_size=1,
-            class_mode="binary", 
+            class_mode="binary",
             shuffle=False)
 
     logos = []
     if runLogoDetection:
-    
+
         logo_probabilities = logo_detection_model.predict_generator(test_generator, TEST_SIZE)
-        
+
         for index, probability in enumerate(logo_probabilities):
             image_path = frames_folder + "/" + test_generator.filenames[index]
             if probability > 0.1:
-                logos.append(image_path) 
+                logos.append(image_path)
     probabilities = close_up_model.predict_generator(test_generator, TEST_SIZE)
-    
+
     priority_images = [{} for x in range(4)]
 
     for index, probability in enumerate(probabilities):
@@ -402,7 +397,7 @@ def groupFrames(frames_folder, close_up_model, logo_detection_model, faceDetMode
         #The probability score is inverted
         if close_up_model_inverted:
             probability = 1 - probability
-        
+
         #print("close-up prediction score: " + str(probability))
 
         image_path = frames_folder + "/" + test_generator.filenames[index]
@@ -422,7 +417,7 @@ def groupFrames(frames_folder, close_up_model, logo_detection_model, faceDetMode
                 priority_images[1][image_path] = probability
         else:
             priority_images[2][image_path] = probability
-            
+
     return priority_images
 
 def get_static(video_path, secondExtract, downscaleOutput, outputFolder):
@@ -438,14 +433,14 @@ def get_static(video_path, secondExtract, downscaleOutput, outputFolder):
 
     duration = totalFrames/fps
 
-            
+
     cutStartFrames = fps * secondExtract
 
 
     if totalFrames < cutStartFrames:
         print("All the frames are cut out")
-        return 
-    
+        return
+
     currentframe = 0
     while(True):
         # reading from frame
@@ -462,12 +457,12 @@ def get_static(video_path, secondExtract, downscaleOutput, outputFolder):
         newName = video_filename.split(".")[0] + "_static_thumbnail.jpg"
         cv2.imwrite(outputFolder + newName, img)
         break
-    
-    
+
+
 def predictBrisque(image_path):
     img = cv2.imread(image_path)
     brisqueScore = brisque.score(img)
-    
+
     #print("")
     #print(image_path.split("/")[-1])
     #print("Brisque score:")
@@ -528,7 +523,7 @@ def detect_faces(image, faceDetModel):
         faces = net.forward()
         for i in range(faces.shape[2]):
             confidence = faces[0, 0, i, 2]
-            if confidence > 0.5: 
+            if confidence > 0.5:
                 box = faces[0, 0, i, 3:7] * np.array([w, h, w, h])
                 (x, y, x1, y1) = box.astype("int")
                 height = y1 - y
@@ -582,5 +577,3 @@ if __name__ == "__main__":
     close_up_model = current_path + '/models/close_up_model.h5'
     logo_detection_model = current_path + '/models/logo_detection.h5'
     main(close_up_model, logo_detection_model)
-    print("AVG time: " + str(sum(times)/37))
-    print(times)

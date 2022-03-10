@@ -1,43 +1,21 @@
-from cgitb import text
-from distutils import command
-from fileinput import filename
-from logging import root
-from sqlite3 import Row
-from sre_parse import State
-from tokenize import String
-from turtle import title, width
-from cv2 import blur
-
-from numpy import column_stack, pad, tri
-from sshtunnel import SSHTunnelForwarder
-import subprocess
 import os
-import paramiko
 from tkinter import *
 import tkinter as tk
 from tkinter.filedialog import askopenfilename
-from scp import SCPClient
 from PIL import ImageTk, Image
-import time
+from os.path import exists
 
-def createSSHClient(server, port, user, password):
-    client = paramiko.SSHClient()
-    client.load_system_host_keys()
-    client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-    client.connect(server, port, user, password)
-    return client
 
 def generate():
-	filename = fileName.get().split('/')[-1]
+	filePath = fileName.get()
+	if not exists(filePath):
+		print("File doesn't exist!")
+		return
+	filename = filePath.split('/')[-1]
 	name, ext = os.path.splitext(filename)
-	outputname = name + '_thumbnail.jpg'
-	staticOutputname = name + '_static_thumbnail.jpg'
 
-	
 	print("Number frames to extract: %s\nFace detection model: %s\nFilename: %s" % (fe.get(), faceVariable.get(), fileName.get()))
-	ssh = createSSHClient('dnat.simula.no', 60441, 'andrehus', 'admin')
-	scp = SCPClient(ssh.get_transport())
-	scp.put(fileName.get(), 'egne_prosjekter/videoAndOutput/')
+
 	vidName = fileName.get().split("/")[-1]
 	csStr = "-css " + cs.get()
 	ceStr = "-ces " + ce.get()
@@ -46,38 +24,17 @@ def generate():
 	runIQAStr = "-xi" if not runIQA.get() else "-brthr " + brisque.get()
 	runLogoDetectionStr = "-xl" if not runLogoDetection.get() else ""
 	runFaceDetectionStr = "-xf" if not runFaceDetection.get() else "-" + faceVariable.get()
-	nbytes = 4096
-	hostname = 'dnat.simula.no'
-	port = 60441
-	username = 'andrehus' 
-	password = 'admin'
-	runStatic = "python create_thumbnail.py %s -st 4\n" % ("../videoAndOutput/" + filename)
-	command = '. activate_conda_environment.sh\n cd egne_prosjekter/thumbnail_generator/\n python create_thumbnail.py %s %s %s %s %s %s %s %s\n %s rm ../videoAndOutput/%s' % ("../videoAndOutput/" + filename, runFaceDetectionStr, closeUpThrStr, nfeStr, runLogoDetectionStr, runIQAStr, csStr, ceStr, runStatic, vidName)
-	client = paramiko.Transport((hostname, port))
-	client.connect(username=username, password=password)
-	stdout_data = []
-	stderr_data = []
-	session = client.open_channel(kind='session')
-	session.exec_command(command)
-	while True:
-		if session.recv_ready():
-			stdout_data.append(session.recv(nbytes))
-		if session.recv_stderr_ready():
-			stderr_data.append(session.recv_stderr(nbytes))
-		if session.exit_status_ready():
-			break
 
-	print('exit status: ', session.recv_exit_status())
-	print(str(stdout_data))
-	print(str(stderr_data))
+	runStatic = "python create_thumbnail.py %s -st 4\n" % (filePath)
+	os.system(runStatic)
+	command = 'python create_thumbnail.py %s %s %s %s %s %s %s %s\n' % (filePath, runFaceDetectionStr, closeUpThrStr, nfeStr, runLogoDetectionStr, runIQAStr, csStr, ceStr)
+	print(command)
+	os.system(command)
+	outputname = './thumbnail_output/' + name + '_thumbnail.jpg'
+	staticOutputname = './thumbnail_output/' + name + '_static_thumbnail.jpg'
 
-	session.close()
-	client.close()
-	scp.get('egne_prosjekter/thumbnail_generator/thumbnail_output/' + outputname)
-	scp.get('egne_prosjekter/thumbnail_generator/thumbnail_output/' + staticOutputname)
-	
 	imgML = Image.open(outputname)
-	
+
 	imgML = imgML.resize((width,height), Image.ANTIALIAS)
 	photoImgML = ImageTk.PhotoImage(imgML)
 	master.imgML = photoImgML
@@ -88,10 +45,10 @@ def generate():
 	master.imgS = photoImgS
 	canvas1.create_image(20,20, anchor=NW, image=photoImgS)
 
-	
+
 
 def open_file():
-	video_file = askopenfilename() 
+	video_file = askopenfilename()
 	video_file_text.set(video_file)
 	fileName.delete(0, 'end')
 	fileName.insert(0, video_file)
@@ -100,7 +57,7 @@ def display_face_det_models():
 		faceDetDropDown.config(state='normal')
 	else:
 		faceDetDropDown.config(state='disabled')
-	
+
 def display_brisque_thr():
 	if runIQA.get():
 		brisque.config(state='normal')
