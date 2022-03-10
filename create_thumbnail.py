@@ -54,6 +54,7 @@ def main():
     staticThumbnailSec = None
     logo_model_name = surmaStr
     logo_detection_model = ""
+    logo_threshold = 0.1
     close_up_model_name = surmaStr
     close_up_model = ""
 
@@ -89,6 +90,7 @@ def main():
     #Flags fixing default values
     parser.add_argument("-cuthr", "--closeUpThreshold", type=restricted_float, default=[close_up_threshold], nargs=1, help="The threshold value for the close-up detection model. The value must be between 0 and 1. The default is: " + str(close_up_threshold))
     parser.add_argument("-brthr", "--brisqueThreshold", type=float, default=[brisque_threshold], nargs=1, help="The threshold value for the image quality predictor model. The default is: " + str(brisque_threshold))
+    parser.add_argument("-logothr", "--logoThreshold", type=restricted_float, default=[logo_threshold], nargs=1, help="The threshold value for the logo detection model. The value must be between 0 and 1. The default value is: " + str(logo_threshold))
     parser.add_argument("-css", "--cutStartSeconds", type=positive_int, default=[cutStartSeconds], nargs=1, help="The number of seconds to cut from start of the video. These seconds of video will not be processed in the thumbnail selection. The default value is: " + str(cutStartSeconds))
     parser.add_argument("-ces", "--cutEndSeconds", type=positive_int, default=[cutEndSeconds], nargs=1, help="The number of seconds to cut from the end of the video. These seconds of video will not be processed in the thumbnail selection. The default value is: " + str(cutEndSeconds))
     numFrameExtractGroup = parser.add_mutually_exclusive_group(required = False)
@@ -117,6 +119,7 @@ def main():
 
     close_up_threshold = args.closeUpThreshold[0]
     brisque_threshold = args.brisqueThreshold[0]
+    logo_threshold = args.logoThreshold[0]
     cutStartSeconds = args.cutStartSeconds[0]
     cutEndSeconds = args.cutEndSeconds[0]
     totalFramesToExtract = args.numberOfFramesToExtract[0]
@@ -185,19 +188,19 @@ def main():
     if processFile:
         name, ext = os.path.splitext(destination)
         if ext == ".ts" or ext == ".mp4":
-            create_thumbnail(name + ext, downscaleOutput, downscaleOnProcessing, close_up_model, logo_detection_model, faceDetModel, runFaceDetection, runIQA, runLogoDetection, runCloseUpDetection, close_up_threshold, brisque_threshold, cutStartSeconds, cutEndSeconds, totalFramesToExtract, fpsExtract, framerateExtract, annotationSecond, beforeAnnotationSecondsCut, afterAnnotationSecondsCut)
+            create_thumbnail(name + ext, downscaleOutput, downscaleOnProcessing, close_up_model, logo_detection_model, faceDetModel, runFaceDetection, runIQA, runLogoDetection, runCloseUpDetection, close_up_threshold, brisque_threshold, logo_threshold, cutStartSeconds, cutEndSeconds, totalFramesToExtract, fpsExtract, framerateExtract, annotationSecond, beforeAnnotationSecondsCut, afterAnnotationSecondsCut)
     elif processFolder:
 
         for f in os.listdir(destination):
             name, ext = os.path.splitext(f)
             print(name + ext)
             if ext == ".ts" or ext == ".mp4":
-                create_thumbnail(destination + name + ext,downscaleOutput , downscaleOnProcessing, close_up_model, logo_detection_model, faceDetModel, runFaceDetection, runIQA, runLogoDetection, runCloseUpDetection, close_up_threshold, brisque_threshold, cutStartSeconds, cutEndSeconds, totalFramesToExtract, fpsExtract, framerateExtract, annotationSecond, beforeAnnotationSecondsCut, afterAnnotationSecondsCut)
+                create_thumbnail(destination + name + ext,downscaleOutput , downscaleOnProcessing, close_up_model, logo_detection_model, faceDetModel, runFaceDetection, runIQA, runLogoDetection, runCloseUpDetection, close_up_threshold, brisque_threshold, logo_threshold, cutStartSeconds, cutEndSeconds, totalFramesToExtract, fpsExtract, framerateExtract, annotationSecond, beforeAnnotationSecondsCut, afterAnnotationSecondsCut)
 
 
 
 
-def create_thumbnail(video_path, downscaleOutput, downscaleOnProcessing, close_up_model, logo_detection_model, faceDetModel, runFaceDetection, runIQA, runLogoDetection, runCloseUpDetection, close_up_threshold, brisque_threshold, cutStartSeconds, cutEndSeconds, totalFramesToExtract, fpsExtract, framerateExtract, annotationSecond, beforeAnnotationSecondsCut, afterAnnotationSecondsCut):
+def create_thumbnail(video_path, downscaleOutput, downscaleOnProcessing, close_up_model, logo_detection_model, faceDetModel, runFaceDetection, runIQA, runLogoDetection, runCloseUpDetection, close_up_threshold, brisque_threshold, logo_threshold, cutStartSeconds, cutEndSeconds, totalFramesToExtract, fpsExtract, framerateExtract, annotationSecond, beforeAnnotationSecondsCut, afterAnnotationSecondsCut):
     video_filename = video_path.split("/")[-1]
     frames_folder_outer = os.path.dirname(os.path.abspath(__file__)) + "/extractedFrames/"
     frames_folder = frames_folder_outer + video_filename.split(".")[0] + "_frames"
@@ -271,7 +274,7 @@ def create_thumbnail(video_path, downscaleOutput, downscaleOnProcessing, close_u
 
         currentframe += 1
 
-    priority_images = groupFrames(frames_folder, close_up_model, logo_detection_model ,faceDetModel, runFaceDetection, runIQA, runLogoDetection, runCloseUpDetection, close_up_threshold, brisque_threshold)
+    priority_images = groupFrames(frames_folder, close_up_model, logo_detection_model ,faceDetModel, runFaceDetection, runIQA, runLogoDetection, runCloseUpDetection, close_up_threshold, brisque_threshold, logo_threshold)
     finalThumbnail = ""
     excluded = []
 
@@ -353,7 +356,7 @@ def create_thumbnail(video_path, downscaleOutput, downscaleOnProcessing, close_u
         return
     return
 
-def groupFrames(frames_folder, close_up_model, logo_detection_model, faceDetModel, runFaceDetection, runIQA, runLogoDetection, runCloseUpDetection, close_up_threshold, brisque_threshold):
+def groupFrames(frames_folder, close_up_model, logo_detection_model, faceDetModel, runFaceDetection, runIQA, runLogoDetection, runCloseUpDetection, close_up_threshold, brisque_threshold, logo_threshold):
     test_generator = None
     TEST_SIZE = 0
     if runCloseUpDetection or runLogoDetection:
@@ -376,7 +379,7 @@ def groupFrames(frames_folder, close_up_model, logo_detection_model, faceDetMode
 
         for index, probability in enumerate(logo_probabilities):
             image_path = frames_folder + "/" + test_generator.filenames[index]
-            if probability > 0.1:
+            if probability > logo_threshold:
                 logos.append(image_path)
 
     priority_images = [{} for x in range(4)]
@@ -384,15 +387,14 @@ def groupFrames(frames_folder, close_up_model, logo_detection_model, faceDetMode
         probabilities = close_up_model.predict_generator(test_generator, TEST_SIZE)
 
         for index, probability in enumerate(probabilities):
-
             #The probability score is inverted:
             if close_up_model_inverted:
                 probability = 1 - probability
 
-                image_path = frames_folder + "/" + test_generator.filenames[index]
+            image_path = frames_folder + "/" + test_generator.filenames[index]
 
-                if image_path in logos:
-                    priority_images[3][image_path] = probability
+            if image_path in logos:
+                priority_images[3][image_path] = probability
 
             elif probability > close_up_threshold:
                 if runFaceDetection:
