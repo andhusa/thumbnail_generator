@@ -14,22 +14,50 @@ def generate():
 	filename = filePath.split('/')[-1]
 	name, ext = os.path.splitext(filename)
 
-	print("Number frames to extract: %s\nFace detection model: %s\nFilename: %s" % (fe.get(), faceVariable.get(), fileName.get()))
+	print("Number frames to extract: %s\nFace detection model: %s\nFilename: %s" % (numFramesExtractVar.get(), faceVar.get(), fileName.get()))
 
-	vidName = fileName.get().split("/")[-1]
-	csStr = "-css " + cs.get()
-	ceStr = "-ces " + ce.get()
-	closeUpThrStr = "-cuthr " + str(float(cuthr.get())/100)
-	nfeStr = '-nfe ' + fe.get()
-	runIQAStr = "-xi" if not runIQA.get() else "-brthr " + brisque.get()
-	runLogoDetectionStr = "-xl" if not runLogoDetection.get() else ""
-	runFaceDetectionStr = "-xf" if not runFaceDetection.get() else "-" + faceVariable.get()
+	annotationStr = ""
+	if annotationMarkVar.get():
+		annotationStr = "-as " + annotationMarkVar.get()
+		if beforeAnnotationVar.get():
+			annotationStr += " -bac " + beforeAnnotationVar.get()
+		if afterAnnotationVar.get():
+			annotationStr += " -aac " + afterAnnotationVar.get()
+
+	csStr = "-css " + cutStartVar.get()
+	ceStr = "-ces " + cutEndVar.get()
+
+
+	downsamplingAlt = ["-nfe " + numFramesExtractVar.get(), "-fre " + downsamplingRatioVar.get(), "-fps " + fpsVar.get()]
+	downsamplingStr = downsamplingAlt[down_sampling_var.get()-1]
+	internalProcessingStr = ""
+	if internalProcessingVar.get():
+		internalProcessingStr = "-ds " + str(float(internalProcessingVar.get())/100)
+	outputImageStr = ""
+	if outputImageVar.get():
+		outputImageStr = "-dso " + str(float(outputImageVar.get())/100)
+
+	runLogoStr = "-xl" if not runLogoVar.get() else ""
+	if runLogoStr == "":
+		pass
+
+	runCloseup = "" if not runcloseupVar.get() else "-cuthr " + str(float(closeupThresholdVar.get())/100)
+	if runCloseup == "":
+		pass
+
+	runFaceStr = "-xf" if not runFaceVar.get() else "-" + faceVar.get()
+
+	runIQAStr = "-xi" if not runIQAVar.get() else "-brthr " + brisqueVar.get()
+
+
+
+
 
 	runStatic = "python create_thumbnail.py %s -st 4\n" % (filePath)
 	os.system(runStatic)
-	command = 'python create_thumbnail.py %s %s %s %s %s %s %s %s\n' % (filePath, runFaceDetectionStr, closeUpThrStr, nfeStr, runLogoDetectionStr, runIQAStr, csStr, ceStr)
-	print(command)
-	os.system(command)
+	runMLbased = 'python create_thumbnail.py %s %s %s %s %s %s %s %s %s %s %s\n' % (filePath, annotationStr, csStr, ceStr, downsamplingStr, internalProcessingStr, outputImageStr, runLogoStr, runCloseup, runFaceStr, runIQAStr)
+	print(runMLbased)
+	os.system(runMLbased)
 	outputname = './thumbnail_output/' + name + '_thumbnail.jpg'
 	staticOutputname = './thumbnail_output/' + name + '_static_thumbnail.jpg'
 
@@ -53,72 +81,72 @@ def open_file():
 	fileName.delete(0, 'end')
 	fileName.insert(0, video_file)
 def display_face_det_models():
-	if runFaceDetection.get():
-		faceDetDropDown.config(state='normal')
+	if runFaceVar.get():
+		faceDropDown.config(state='normal')
 	else:
-		faceDetDropDown.config(state='disabled')
+		faceDropDown.config(state='disabled')
 
 def display_brisque_thr():
-	if runIQA.get():
-		brisque.config(state='normal')
+	if runIQAVar.get():
+		brisqueVar.config(state='normal')
 		iqaDropDown.config(state='normal')
 	else:
-		brisque.config(state='disabled')
+		brisqueVar.config(state='disabled')
 		iqaDropDown.config(state='disabled')
 
 def display_blur_thr():
-	if runBlurDetection.get():
-		blurThr.config(state='normal')
-		blurDetDropDown.config(state='normal')
+	if runBlurVar.get():
+		blurThresholdVar.config(state='normal')
+		blurDropDown.config(state='normal')
 	else:
-		blurThr.config(state='disabled')
-		blurDetDropDown.config(state='disabled')
+		blurThresholdVar.config(state='disabled')
+		blurDropDown.config(state='disabled')
 def display_logo_det_models():
-	if runLogoDetection.get():
-		logoDetDropDown.config(state='normal')
-		ldthr.config(state='normal')
+	if runLogoVar.get():
+		logoDropDown.config(state='normal')
+		logoThresholdVar.config(state='normal')
 	else:
-		logoDetDropDown.config(state='disabled')
-		ldthr.config(state='disabled')
+		logoDropDown.config(state='disabled')
+		logoThresholdVar.config(state='disabled')
 
 def disable_other_entries_downsampling():
 	if down_sampling_var.get() == 1:
-		fe.config(state='normal')
-		dr.config(state='disabled')
-		fps.config(state='disabled')
+		numFramesExtractVar.config(state='normal')
+		downsamplingRatioVar.config(state='disabled')
+		fpsVar.config(state='disabled')
 	if down_sampling_var.get() == 2:
-		fe.config(state='disabled')
-		dr.config(state='normal')
-		fps.config(state='disabled')
+		numFramesExtractVar.config(state='disabled')
+		downsamplingRatioVar.config(state='normal')
+		fpsVar.config(state='disabled')
 	if down_sampling_var.get() == 3:
-		fe.config(state='disabled')
-		dr.config(state='disabled')
-		fps.config(state='normal')
+		numFramesExtractVar.config(state='disabled')
+		downsamplingRatioVar.config(state='disabled')
+		fpsVar.config(state='normal')
 def display_close_up():
-	if runCloseUpDetection.get():
-		cuthr.config(state='normal')
-		closeUpDropDown.config(state='normal')
+	if runcloseupVar.get():
+		closeupThresholdVar.config(state='normal')
+		closeupDropDown.config(state='normal')
 	else:
-		cuthr.config(state='disabled')
-		closeUpDropDown.config(state='disabled')
+		closeupThresholdVar.config(state='disabled')
+		closeupDropDown.config(state='disabled')
 
 master = tk.Tk()
 master.winfo_toplevel().title("HOST-ATS Graphical User Interface")
-faceVariable = StringVar(master)
-faceVariable.set("dlib") # default value
-logoVariable = StringVar(master)
-logoVariable.set('Surma')
-blurVariable = StringVar(master)
-blurVariable.set("SVD")
+faceVar = StringVar(master)
+faceVar.set("dlib") # default value
+logoVar = StringVar(master)
+logoVar.set('Surma')
+blurVar = StringVar(master)
+blurVar.set("SVD")
 iqaVar = StringVar(master)
 iqaVar.set("Ocampo")
-closeUpVar = StringVar(master)
-closeUpVar.set("Surma")
-runIQA = BooleanVar(value=True)
-runLogoDetection = BooleanVar(value=True)
-runFaceDetection = BooleanVar(value=True)
-runBlurDetection = BooleanVar(value=True)
-runCloseUpDetection = BooleanVar(value=True)
+closeupVar = StringVar(master)
+closeupVar.set("Surma")
+runIQAVar = BooleanVar(value=True)
+runLogoVar = BooleanVar(value=True)
+runFaceVar = BooleanVar(value=True)
+runBlurVar = BooleanVar(value=True)
+runcloseupVar = BooleanVar(value=True)
 video_file_text = StringVar(value="No file selected					")
 generate_button_state = StringVar(value='disabled')
 pre_processing = LabelFrame(master, text="Step 1. Pre-processing", font=('Arial', 20), padx=10, pady=10)
@@ -146,17 +174,17 @@ content_analysis = LabelFrame(master, text="Step 2. Content Analysis", font=('Ar
 content_analysis.grid(row=0, column=3, padx=10, pady=10, sticky=tk.N)
 logo_detection = LabelFrame(content_analysis, text="2a. Logo Detection", padx=10, pady=10)
 logo_detection.grid(padx=10, pady=10, sticky=tk.W)
-logo = tk.Checkbutton(logo_detection, command=display_logo_det_models, text="Run Logo Detection", variable=runLogoDetection)
+runLogoCheckbutton = tk.Checkbutton(logo_detection, command=display_logo_det_models, text="Run Logo Detection", variable=runLogoVar)
 tk.Label(logo_detection, text="Logo Detection Model").grid(row=1, sticky=tk.W)
 tk.Label(logo_detection, text="Logo detection threshold (%)").grid(row=2, sticky=tk.W)
 close_up_shot_detection = LabelFrame(content_analysis, text="2b. Close-up Shot Detection", padx=10, pady=10)
 close_up_shot_detection.grid(padx=10, pady=10)
-runClose = tk.Checkbutton(close_up_shot_detection, command=display_close_up,text="Run Close-up Shot Detection", variable=runCloseUpDetection)
+runCloseCheckbutton = tk.Checkbutton(close_up_shot_detection, command=display_close_up,text="Run Close-up Shot Detection", variable=runcloseupVar)
 tk.Label(close_up_shot_detection, text="Close-up shot detection model").grid(row=1, sticky=tk.W)
 tk.Label(close_up_shot_detection, text="Close-up detection threshold (%)").grid(row=2, sticky=tk.W)
 face_detection = LabelFrame(content_analysis, text="2c. Face Detection", padx=10, pady=10)
 face_detection.grid(padx=10, pady=10, sticky=tk.W)
-runFace = tk.Checkbutton(face_detection, command=display_face_det_models, text="Run Face Detection", variable=runFaceDetection)
+runFaceCheckbutton = tk.Checkbutton(face_detection, command=display_face_det_models, text="Run Face Detection", variable=runFaceVar)
 tk.Label(face_detection, text="Face Detection Model").grid(row=1, sticky=tk.W)
 
 image_quality_analysis = LabelFrame(master, text="Step 3. Image Quality Analysis", font=('Arial', 20), padx=10, pady=10)
@@ -176,69 +204,70 @@ file_processing.grid(row=1, column=3, columnspan=4, padx=10, pady=10, sticky=tk.
 video_file_text_label = tk.Label(file_processing, textvariable=video_file_text, font=('Arial', 8)).grid(sticky=tk.W, column=1)
 generate_button = tk.Button(file_processing, text='Generate', command=generate).grid(sticky=tk.W)
 
-am = tk.Entry(trimming, width=5)
-ba = tk.Entry(trimming, width=5)
-aa = tk.Entry(trimming, width=5)
-cs = tk.Entry(trimming, width=5)
-ce = tk.Entry(trimming, width=5)
-fe = tk.Entry(down_sampling, width=5)
-dr = tk.Entry(down_sampling, width=5, state='disabled')
-fps = tk.Entry(down_sampling, width=5, state='disabled')
-ip = tk.Entry(down_scaling, width=5)
-oi = tk.Entry(down_scaling, width=5)
+annotationMarkVar = tk.Entry(trimming, width=5)
+beforeAnnotationVar = tk.Entry(trimming, width=5)
+afterAnnotationVar = tk.Entry(trimming, width=5)
+cutStartVar = tk.Entry(trimming, width=5)
+cutEndVar = tk.Entry(trimming, width=5)
+numFramesExtractVar = tk.Entry(down_sampling, width=5)
+downsamplingRatioVar = tk.Entry(down_sampling, width=5, state='disabled')
+fpsVar = tk.Entry(down_sampling, width=5, state='disabled')
+internalProcessingVar = tk.Entry(down_scaling, width=5)
+outputImageVar = tk.Entry(down_scaling, width=5)
 
-ldthr = tk.Entry(logo_detection, width=5)
-cuthr = tk.Entry(close_up_shot_detection, width=5)
+logoThresholdVar = tk.Entry(logo_detection, width=5)
+closeupThresholdVar = tk.Entry(close_up_shot_detection, width=5)
 
-faceDetDropDown = tk.OptionMenu(face_detection, faceVariable, "haar", "dlib", "mtcnn", "dnn")
-logoDetDropDown = tk.OptionMenu(logo_detection, logoVariable, "Surma", "Ocampo")
-blurDetDropDown = tk.OptionMenu(blur_detection, blurVariable, "SVD", "Laplacian")
+faceDropDown = tk.OptionMenu(face_detection, faceVar, "haar", "dlib", "mtcnn", "dnn")
+logoDropDown = tk.OptionMenu(logo_detection, logoVar, "Surma", "Ocampo")
+blurDropDown = tk.OptionMenu(blur_detection, blurVar, "SVD", "Laplacian")
 iqaDropDown = tk.OptionMenu(image_quality_prediction, iqaVar, "Ocampo")
-closeUpDropDown = tk.OptionMenu(close_up_shot_detection, closeUpVar, "Surma")
+closeupDropDown = tk.OptionMenu(close_up_shot_detection, closeupVar, "Surma")
 fileName = tk.Entry(file_processing)
-iqa = tk.Checkbutton(image_quality_prediction, command=display_brisque_thr, text="Run Image Quality Prediction", variable=runIQA)
-brisque = tk.Entry(image_quality_prediction, width=5)
-runBlur = tk.Checkbutton(blur_detection, command=display_blur_thr, text="Run Blur Detection", variable=runBlurDetection)
-blurThr = tk.Entry(blur_detection, width=5)
-fe.insert(10, "50")
-cs.insert(10, "0")
-ce.insert(10, "0")
-ip.insert(10, "50")
-oi.insert(10, "100")
-ldthr.insert(10, "10")
-cuthr.insert(10, "75")
-brisque.insert(10, "35")
-blurThr.insert(10, "0.6")
+runIQACheckbutton = tk.Checkbutton(image_quality_prediction, command=display_brisque_thr, text="Run Image Quality Prediction", variable=runIQAVar)
+brisqueVar = tk.Entry(image_quality_prediction, width=5)
+runBlurCheckbutton = tk.Checkbutton(blur_detection, command=display_blur_thr, text="Run Blur Detection", variable=runBlurVar)
+blurThresholdVar = tk.Entry(blur_detection, width=5)
+numFramesExtractVar.insert(10, "50")
+cutStartVar.insert(10, "0")
+cutEndVar.insert(10, "0")
+internalProcessingVar.insert(10, "50")
+outputImageVar.insert(10, "100")
+logoThresholdVar.insert(10, "10")
+closeupThresholdVar.insert(10, "75")
+brisqueVar.insert(10, "35")
+blurThresholdVar.insert(10, "0.6")
 
-am.grid(row=0, column=1)
-ba.grid(row=1, column=1)
-aa.grid(row=2, column=1)
-cs.grid(row=3, column=1)
-ce.grid(row=4, column=1)
-fe.grid(row=0, column=1)
-dr.grid(row=1, column=1)
-fps.grid(row=2, column=1)
-ip.grid(row=0, column=1)
-oi.grid(row=1, column=1)
 
-logo.grid(row=0, column=0, sticky=tk.W)
-logoDetDropDown.grid(row=1, column=1)
-ldthr.grid(row=2, column=1)
+annotationMarkVar.grid(row=0, column=1)
+beforeAnnotationVar.grid(row=1, column=1)
+afterAnnotationVar.grid(row=2, column=1)
+cutStartVar.grid(row=3, column=1)
+cutEndVar.grid(row=4, column=1)
+numFramesExtractVar.grid(row=0, column=1)
+downsamplingRatioVar.grid(row=1, column=1)
+fpsVar.grid(row=2, column=1)
+internalProcessingVar.grid(row=0, column=1)
+outputImageVar.grid(row=1, column=1)
 
-runClose.grid(row=0, column=0)
-closeUpDropDown.grid(row=1, column=1)
-cuthr.grid(row=2, column=1)
+runLogoCheckbutton.grid(row=0, column=0, sticky=tk.W)
+logoDropDown.grid(row=1, column=1)
+logoThresholdVar.grid(row=2, column=1)
 
-runFace.grid(row=0, column=0)
-faceDetDropDown.grid(row=1, column=1)
+runCloseCheckbutton.grid(row=0, column=0)
+closeupDropDown.grid(row=1, column=1)
+closeupThresholdVar.grid(row=2, column=1)
 
-iqa.grid(row=0, column=0)
+runFaceCheckbutton.grid(row=0, column=0)
+faceDropDown.grid(row=1, column=1)
+
+runIQACheckbutton.grid(row=0, column=0)
 iqaDropDown.grid(row=1, column=1)
-brisque.grid(row=2, column=1)
+brisqueVar.grid(row=2, column=1)
 
-runBlur.grid(row=0, column=0)
-blurDetDropDown.grid(row=1,column=1)
-blurThr.grid(row=2,column=1)
+runBlurCheckbutton.grid(row=0, column=0)
+blurDropDown.grid(row=1,column=1)
+blurThresholdVar.grid(row=2,column=1)
 
 
 
