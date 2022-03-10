@@ -4,7 +4,7 @@ import tkinter as tk
 from tkinter.filedialog import askopenfilename
 from PIL import ImageTk, Image
 from os.path import exists
-
+import subprocess
 
 def generate():
 	filePath = fileName.get()
@@ -48,24 +48,38 @@ def generate():
 	runIQAStr = "-xi" if not runIQAVar.get() else "-IQA" + iqaVar.get() + " -brthr " + brisqueVar.get()
 
 	runStatic = "python create_thumbnail.py %s -st 4\n" % (filePath)
-	os.system(runStatic)
-	runMLbased = 'python create_thumbnail.py %s %s %s %s %s %s %s %s %s %s %s\n' % (filePath, annotationStr, csStr, ceStr, downsamplingStr, internalProcessingStr, outputImageStr, runLogoStr, runCloseup, runFaceStr, runIQAStr)
-	print(runMLbased)
-	os.system(runMLbased)
-	outputname = './thumbnail_output/' + name + '_thumbnail.jpg'
-	staticOutputname = './thumbnail_output/' + name + '_static_thumbnail.jpg'
+	try:
+		#subprocess.run([runStatic], check = True)
+		if os.system(runStatic) != 0:
+			raise Exception('runStatic did not work')
+		runMLbased = 'python create_thumbnail.py %s %s %s %s %s %s %s %s %s %s %s\n' % (filePath, annotationStr, csStr, ceStr, downsamplingStr, internalProcessingStr, outputImageStr, runLogoStr, runCloseup, runFaceStr, runIQAStr)
+		print(runMLbased)
+		if os.system(runMLbased) != 0:
+			raise Exception('runMLbased did not work')
+		outputname = './thumbnail_output/' + name + '_thumbnail.jpg'
+		staticOutputname = './thumbnail_output/' + name + '_static_thumbnail.jpg'
 
-	imgML = Image.open(outputname)
+		imgML = Image.open(outputname)
 
-	imgML = imgML.resize((width,height), Image.ANTIALIAS)
-	photoImgML = ImageTk.PhotoImage(imgML)
-	master.imgML = photoImgML
-	canvas2.create_image(20,20, anchor=NW, image=photoImgML)
-	imgS = Image.open(staticOutputname)
-	imgS = imgS.resize((width,height), Image.ANTIALIAS)
-	photoImgS = ImageTk.PhotoImage(imgS)
-	master.imgS = photoImgS
-	canvas1.create_image(20,20, anchor=NW, image=photoImgS)
+		imgML = imgML.resize((width,height), Image.ANTIALIAS)
+		photoImgML = ImageTk.PhotoImage(imgML)
+		master.imgML = photoImgML
+		canvas2.create_image(20,20, anchor=NW, image=photoImgML)
+		imgS = Image.open(staticOutputname)
+		imgS = imgS.resize((width,height), Image.ANTIALIAS)
+		photoImgS = ImageTk.PhotoImage(imgS)
+		master.imgS = photoImgS
+		canvas1.create_image(20,20, anchor=NW, image=photoImgS)
+	except:
+		print("Creating thumbnail did not work with the given arguments")
+
+
+
+	#os.system(runStatic)
+	#runMLbased = 'python create_thumbnail.py %s %s %s %s %s %s %s %s %s %s %s\n' % (filePath, annotationStr, csStr, ceStr, downsamplingStr, internalProcessingStr, outputImageStr, runLogoStr, runCloseup, runFaceStr, runIQAStr)
+	#print(runMLbased)
+	#os.system(runMLbased)
+
 
 
 

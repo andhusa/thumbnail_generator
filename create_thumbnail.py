@@ -187,9 +187,11 @@ def main():
     elif os.path.isfile(destination):
         processFile = True
         print("is file")
+        name, ext = os.path.splitext(destination)
+        if ext != ".ts" or ext != ".mp4":
+            raise Exception("The input file is not a video file")
     else:
-        print("Error: The input destination was neither file or directory")
-        return
+        raise Exception("The input destination was neither file or directory")
 
     try:
         if not os.path.exists(thumbnail_output):
@@ -211,13 +213,10 @@ def main():
 
     if processFile:
         name, ext = os.path.splitext(destination)
-        if ext == ".ts" or ext == ".mp4":
-            create_thumbnail(name + ext, downscaleOutput, downscaleOnProcessing, close_up_model, logo_detection_model, faceDetModel, runFaceDetection, runIQA, iqa_model_name, runLogoDetection, runCloseUpDetection, close_up_threshold, brisque_threshold, logo_threshold, cutStartSeconds, cutEndSeconds, totalFramesToExtract, fpsExtract, framerateExtract, annotationSecond, beforeAnnotationSecondsCut, afterAnnotationSecondsCut)
+        create_thumbnail(name + ext, downscaleOutput, downscaleOnProcessing, close_up_model, logo_detection_model, faceDetModel, runFaceDetection, runIQA, iqa_model_name, runLogoDetection, runCloseUpDetection, close_up_threshold, brisque_threshold, logo_threshold, cutStartSeconds, cutEndSeconds, totalFramesToExtract, fpsExtract, framerateExtract, annotationSecond, beforeAnnotationSecondsCut, afterAnnotationSecondsCut)
     elif processFolder:
-
         for f in os.listdir(destination):
             name, ext = os.path.splitext(f)
-            print(name + ext)
             if ext == ".ts" or ext == ".mp4":
                 create_thumbnail(destination + name + ext,downscaleOutput , downscaleOnProcessing, close_up_model, logo_detection_model, faceDetModel, runFaceDetection, runIQA, iqa_model_name, runLogoDetection, runCloseUpDetection, close_up_threshold, brisque_threshold, logo_threshold, cutStartSeconds, cutEndSeconds, totalFramesToExtract, fpsExtract, framerateExtract, annotationSecond, beforeAnnotationSecondsCut, afterAnnotationSecondsCut)
 
@@ -248,8 +247,7 @@ def create_thumbnail(video_path, downscaleOutput, downscaleOnProcessing, close_u
 
 
     if totalFrames < cutStartFrames + cutEndFrames:
-        print("All the frames are cut out")
-        return
+        raise Exception("All the frames are cut out")
     try:
         # creating a folder for frames
         if not os.path.exists(frames_folder):
@@ -465,8 +463,7 @@ def get_static(video_path, secondExtract, downscaleOutput, outputFolder):
 
 
     if totalFrames < cutStartFrames:
-        print("All the frames are cut out")
-        return
+        raise Exception("All the frames are cut out")
 
     currentframe = 0
     while(True):
