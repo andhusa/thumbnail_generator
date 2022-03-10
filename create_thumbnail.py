@@ -24,7 +24,6 @@ configFile = current_path + "/models/deploy.prototxt.txt"
 thumbnail_output = current_path + "/thumbnail_output/"
 excluded_images = current_path + "/excluded_images/"
 
-#num_videos = 2
 haarStr = "haar"
 dlibStr = "dlib"
 mtcnnStr = "mtcnn"
@@ -141,8 +140,6 @@ def main(close_up_model, logo_detection_model):
     try:
         if not os.path.exists(thumbnail_output):
             os.mkdir(thumbnail_output)
-        #if not os.path.exists(excluded_images):
-        #    os.mkdir(excluded_images)
 
     except OSError:
         print("Error: Couldn't create thumbnail output directory")
@@ -164,16 +161,11 @@ def main(close_up_model, logo_detection_model):
             create_thumbnail(name + ext, downscaleOutput, downscaleOnProcessing, close_up_model, logo_detection_model, faceDetModel, runFaceDetection, runIQA, runLogoDetection, close_up_threshold, brisque_threshold, cutStartSeconds, cutEndSeconds, totalFramesToExtract, fpsExtract, framerateExtract, annotationSecond, beforeAnnotationSecondsCut, afterAnnotationSecondsCut)
     elif processFolder:
 
-        i = 0
         for f in os.listdir(destination):
-            #if i >= num_videos:
-            #    return
             name, ext = os.path.splitext(f)
             print(name + ext)
             if ext == ".ts" or ext == ".mp4":
                 create_thumbnail(destination + name + ext,downscaleOutput , downscaleOnProcessing, close_up_model, logo_detection_model, faceDetModel, runFaceDetection, runIQA, runLogoDetection, close_up_threshold, brisque_threshold, cutStartSeconds, cutEndSeconds, totalFramesToExtract, fpsExtract, framerateExtract, annotationSecond, beforeAnnotationSecondsCut, afterAnnotationSecondsCut)
-
-                i += 1
 
 
 
@@ -183,7 +175,6 @@ def create_thumbnail(video_path, downscaleOutput, downscaleOnProcessing, close_u
     frames_folder_outer = os.path.dirname(os.path.abspath(__file__)) + "/extractedFrames/"
     frames_folder = frames_folder_outer + video_filename.split(".")[0] + "_frames"
     # Read the video from specified path
-
 
     cam = cv2.VideoCapture(video_path)
     totalFrames = int(cam.get(cv2.CAP_PROP_FRAME_COUNT))
@@ -224,9 +215,7 @@ def create_thumbnail(video_path, downscaleOutput, downscaleOnProcessing, close_u
     if framerateExtract:
         totalFramesToExtract = math.floor(remainingFrames * framerateExtract)
 
-    #print("Duration in sec: " + str(duration))
-    #print("Number of frames: " + str(totalFrames))
-    # frame
+
     currentframe = 0
     # frames to skip
     frame_skip = (totalFrames-(cutStartFrames + cutEndFrames))//totalFramesToExtract
@@ -252,11 +241,9 @@ def create_thumbnail(video_path, downscaleOutput, downscaleOnProcessing, close_u
 
             cv2.imwrite(name, img)
             numFramesExtracted += 1
-            # increasing counter so that it will
-            # show how many frames are created
+
         currentframe += 1
 
-    # Release all space and windows once done
     priority_images = groupFrames(frames_folder, close_up_model, logo_detection_model ,faceDetModel, runFaceDetection, runIQA, runLogoDetection, close_up_threshold, brisque_threshold)
     finalThumbnail = ""
     excluded = []
@@ -265,32 +252,19 @@ def create_thumbnail(video_path, downscaleOutput, downscaleOnProcessing, close_u
         if finalThumbnail != "":
             break
         priority = dict(sorted(priority.items(), key=lambda item: item[1], reverse=True))
-        #print("")
-        #print("Frames in group: ")
-        #for key in priority:
-        #    print(key.split("/")[-1])
+
+        '''
+        Blur detection not added:
+
         bestScore = 0
         blur_threshold = 0.6
-        '''
-        for key in priority:
-            score = get_blur_degree(key)
-            print(key)
-            print(score)
-            print("")
-        '''
-
         for key in priority:
             score = get_blur_degree(key)
 
-            #if score > blur_threshold:
-            #    excluded.append(key)
-
-            '''
             if finalThumbnail == "":
                 bestScore = score
                 finalThumbnail = key
-                excluded.append(key)
-            '''
+
             if score < blur_threshold:
                 #finalThumbnail = key
                 brisqueScore = predictBrisque(key)
@@ -298,21 +272,12 @@ def create_thumbnail(video_path, downscaleOutput, downscaleOnProcessing, close_u
                     finalThumbnail = key
                     break
 
-            '''
             if score < bestScore:
                 bestScore = score
                 finalThumbnail = key
-                excluded.append(key)
-            '''
-    '''
-    print("Excluded:")
 
-    for exclude in excluded:
-        print(exclude)
-        img = cv2.imread(exclude)
-        cv2.imwrite(excluded_images + video_filename.split(".")[0] + "_" + exclude.split("/")[-1], img)
-    '''
-    '''
+        '''
+
         if runIQA:
             bestScore = 0
             for key in priority:
@@ -330,7 +295,7 @@ def create_thumbnail(video_path, downscaleOutput, downscaleOnProcessing, close_u
             for key in priority:
                 finalThumbnail = key
                 break
-    '''
+
     if finalThumbnail != "":
         newName = video_filename.split(".")[0] + "_thumbnail.jpg"
         imageName = finalThumbnail.split("/")[-1].split(".")[0]
@@ -347,16 +312,12 @@ def create_thumbnail(video_path, downscaleOutput, downscaleOnProcessing, close_u
 
         cv2.imwrite(thumbnail_output + newName, frame)
 
+        # Release all space and windows once done
         cam.release()
         cv2.destroyAllWindows()
 
+        #secInVid = (frameNum / totalFrames) * duration
 
-        #print("")
-        #print("Final thumbnail frame number: " + str(frameNum))
-        secInVid = (frameNum / totalFrames) * duration
-        #print(video_filename)
-        #print("second in video: " + str(secInVid))
-        #print("____")
         try:
             shutil.rmtree(frames_folder_outer)
 
@@ -392,17 +353,13 @@ def groupFrames(frames_folder, close_up_model, logo_detection_model, faceDetMode
     priority_images = [{} for x in range(4)]
 
     for index, probability in enumerate(probabilities):
-        #print("")
-        #print(test_generator.filenames[index])
-        #The probability score is inverted
+
+        #The probability score is inverted:
         if close_up_model_inverted:
             probability = 1 - probability
 
-        #print("close-up prediction score: " + str(probability))
-
         image_path = frames_folder + "/" + test_generator.filenames[index]
-        #print(image_path)
-        #print("")
+
         if image_path in logos:
             priority_images[3][image_path] = probability
 
@@ -424,8 +381,6 @@ def get_static(video_path, secondExtract, downscaleOutput, outputFolder):
     video_filename = video_path.split("/")[-1]
     frames_folder_outer = os.path.dirname(os.path.abspath(__file__)) + "/extractedFrames/"
     frames_folder = frames_folder_outer + video_filename.split(".")[0] + "_frames"
-    # Read the video from specified path
-
 
     cam = cv2.VideoCapture(video_path)
     totalFrames = int(cam.get(cv2.CAP_PROP_FRAME_COUNT))
@@ -463,10 +418,6 @@ def predictBrisque(image_path):
     img = cv2.imread(image_path)
     brisqueScore = brisque.score(img)
 
-    #print("")
-    #print(image_path.split("/")[-1])
-    #print("Brisque score:")
-    #print(brisqueScore)
     return brisqueScore
 
 def get_blur_degree(image_file, sv_num=10):
@@ -505,9 +456,7 @@ def detect_faces(image, faceDetModel):
         detector = MTCNN()
         img = cv2.imread(image)
         faces = detector.detect_faces(img)
-        #Could grayscale
 
-        # to draw faces on image
         for result in faces:
             x, y, w, h = result['box']
             size = h
