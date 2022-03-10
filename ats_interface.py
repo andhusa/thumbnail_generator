@@ -31,6 +31,7 @@ def generate():
 	filename = fileName.get().split('/')[-1]
 	name, ext = os.path.splitext(filename)
 	outputname = name + '_thumbnail.jpg'
+	staticOutputname = name + '_static_thumbnail.jpg'
 
 	
 	print("Number frames to extract: %s\nFace detection model: %s\nFilename: %s" % (fe.get(), faceVariable.get(), fileName.get()))
@@ -50,7 +51,8 @@ def generate():
 	port = 60441
 	username = 'andrehus' 
 	password = 'admin'
-	command = '. activate_conda_environment.sh\n cd egne_prosjekter/thumbnail_generator/\n python create_thumbnail.py %s %s %s %s %s %s %s %s\n rm ../videoAndOutput/%s' % ("../videoAndOutput/" + filename, runFaceDetectionStr, closeUpThrStr, nfeStr, runLogoDetectionStr, runIQAStr, csStr, ceStr, vidName)
+	runStatic = "python create_thumbnail.py %s -st 4\n" % ("../videoAndOutput/" + filename)
+	command = '. activate_conda_environment.sh\n cd egne_prosjekter/thumbnail_generator/\n python create_thumbnail.py %s %s %s %s %s %s %s %s\n %s rm ../videoAndOutput/%s' % ("../videoAndOutput/" + filename, runFaceDetectionStr, closeUpThrStr, nfeStr, runLogoDetectionStr, runIQAStr, csStr, ceStr, runStatic, vidName)
 	client = paramiko.Transport((hostname, port))
 	client.connect(username=username, password=password)
 	stdout_data = []
@@ -72,19 +74,24 @@ def generate():
 	session.close()
 	client.close()
 	scp.get('egne_prosjekter/thumbnail_generator/thumbnail_output/' + outputname)
+	scp.get('egne_prosjekter/thumbnail_generator/thumbnail_output/' + staticOutputname)
 	
-	img = Image.open(outputname)
-	print(img)
-	img = img.resize((width,height), Image.ANTIALIAS)
-	print(img)
-	photoImg = ImageTk.PhotoImage(img)
-	print(photoImg)
-	master.img = photoImg
-	canvas.create_image(20,20, anchor=NW, image=photoImg)
+	imgML = Image.open(outputname)
+	
+	imgML = imgML.resize((width,height), Image.ANTIALIAS)
+	photoImgML = ImageTk.PhotoImage(imgML)
+	master.imgML = photoImgML
+	canvas2.create_image(20,20, anchor=NW, image=photoImgML)
+	imgS = Image.open(staticOutputname)
+	imgS = imgS.resize((width,height), Image.ANTIALIAS)
+	photoImgS = ImageTk.PhotoImage(imgS)
+	master.imgS = photoImgS
+	canvas1.create_image(20,20, anchor=NW, image=photoImgS)
+
 	
 
 def open_file():
-	video_file = askopenfilename()
+	video_file = askopenfilename() 
 	video_file_text.set(video_file)
 	fileName.delete(0, 'end')
 	fileName.insert(0, video_file)
@@ -208,11 +215,9 @@ tk.Label(blur_detection, text="Blur Detection Model").grid(row=1, sticky=tk.W)
 tk.Label(blur_detection, text="Blur score threshold").grid(row=2, sticky=tk.W)
 
 file_processing = LabelFrame(master, padx=10, pady=10)
-file_processing.grid(row=1, column=5, padx=10, pady=10, sticky=tk.N)
+file_processing.grid(row=1, column=3, columnspan=4, padx=10, pady=10, sticky=tk.N+tk.W+tk.E)
 video_file_text_label = tk.Label(file_processing, textvariable=video_file_text, font=('Arial', 8)).grid(sticky=tk.W, column=1)
-#generate_button = tk.Button(file_processing, text='Generate', command=generate).grid(sticky=tk.W)
-generate_button = tk.Button(file_processing, text='Generate').grid(sticky=tk.W)
-
+generate_button = tk.Button(file_processing, text='Generate', command=generate).grid(sticky=tk.W)
 
 am = tk.Entry(trimming, width=5)
 ba = tk.Entry(trimming, width=5)
@@ -288,9 +293,13 @@ tk.Button(file_processing,
 ratio = 1.7777778
 height = 140
 width = int(height * ratio)
-canvas = Canvas(file_processing, width=width, height=height)
-canvas.grid(sticky=tk.W)
+staticLabel = tk.Label(file_processing, text="Static thumbnail:").grid(row=3, column=0)
+canvas1 = Canvas(file_processing, width=width, height=height)
+canvas1.grid(row=4, column=0)
+mlBasedLabel = tk.Label(file_processing, text="ML-based thumbnail:").grid(row=3, column=1)
+canvas2 = Canvas(file_processing, width=width, height=height)
+canvas2.grid(row=4, column=1)
+
 master.mainloop()
 
 tk.mainloop()
-
