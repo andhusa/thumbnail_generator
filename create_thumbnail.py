@@ -52,6 +52,7 @@ def main(close_up_model, logo_detection_model):
     annotationSecond = None
     beforeAnnotationSecondsCut = None
     afterAnnotationSecondsCut = None
+    staticThumbnailSec = None
 
     parser = argparse.ArgumentParser(description="Thumbnail generator")
     parser.add_argument("destination", nargs=1, help="Destination of the input to be processed. Can be file or folder")
@@ -80,10 +81,12 @@ def main(close_up_model, logo_detection_model):
     parser.add_argument("-as", "--annotationSecond", type=positive_int, default=[annotationSecond], nargs=1, help="The second the event is annotated to in the video.")
     parser.add_argument("-bac", "--beforeAnnotationSecondsCut", type=positive_int, default=[beforeAnnotationSecondsCut], nargs=1, help="Seconds before the annotation to cut the frame extraction.")
     parser.add_argument("-aac", "--afterAnnotationSecondsCut", type=positive_int, default=[afterAnnotationSecondsCut], nargs=1, help="Seconds after the annotation to cut the frame extraction.")
+    parser.add_argument("-st", "--staticThumbnailSec", type=positive_int, default=[staticThumbnailSec], nargs=1, help="To generate a static thumbnail from the video, this flag is used. The second the frame should be clipped from should follow as an argument. Running this flag ignores all the other flags.")
 
 
     args = parser.parse_args()
     destination = args.destination[0]
+    staticThumbnailSec = args.staticThumbnailSec[0]
     runFaceDetection = args.xFaceDetection
     runIQA = args.xIQA
     runLogoDetection = args.xLogoDetection
@@ -139,11 +142,15 @@ def main(close_up_model, logo_detection_model):
     try:
         if not os.path.exists(thumbnail_output):
             os.mkdir(thumbnail_output)
-        if not os.path.exists(excluded_images):
-            os.mkdir(excluded_images)
+        #if not os.path.exists(excluded_images):
+        #    os.mkdir(excluded_images)
 
     except OSError:
         print("Error: Couldn't create thumbnail output directory")
+        return
+    
+    if staticThumbnailSec:
+        get_static(destination, staticThumbnailSec, downscaleOutput, thumbnail_output)
         return
     
     close_up_model = keras.models.load_model(close_up_model)
@@ -196,7 +203,7 @@ def create_thumbnail(video_path, downscaleOutput, downscaleOnProcessing, close_u
     cutEndFrames = fps * cutEndSeconds
 
 
-    if totalFrames < cutStartFrames + cutEndSeconds:
+    if totalFrames < cutStartFrames + cutEndFrames:
         print("All the frames are cut out")
         return 
     try:
@@ -280,8 +287,8 @@ def create_thumbnail(video_path, downscaleOutput, downscaleOnProcessing, close_u
         for key in priority:
             score = get_blur_degree(key)
             
-            if score > blur_threshold:
-                excluded.append(key)
+            #if score > blur_threshold:
+            #    excluded.append(key)
             
             '''
             if finalThumbnail == "":
@@ -302,13 +309,14 @@ def create_thumbnail(video_path, downscaleOutput, downscaleOnProcessing, close_u
                 finalThumbnail = key
                 excluded.append(key)
             '''
-    
+    '''
     print("Excluded:")
     
     for exclude in excluded:
         print(exclude)
         img = cv2.imread(exclude)
         cv2.imwrite(excluded_images + video_filename.split(".")[0] + "_" + exclude.split("/")[-1], img) 
+    '''
     '''
         if runIQA:
             bestScore = 0
@@ -355,8 +363,8 @@ def create_thumbnail(video_path, downscaleOutput, downscaleOnProcessing, close_u
         #print("second in video: " + str(secInVid))
         #print("____")
         try:
-            #shutil.rmtree(frames_folder_outer)
-            pass
+            shutil.rmtree(frames_folder_outer)
+            
         except OSError as e:
             print("Error: %s - %s." % (e.filename, e.strerror))
         return
@@ -417,6 +425,45 @@ def groupFrames(frames_folder, close_up_model, logo_detection_model, faceDetMode
             
     return priority_images
 
+def get_static(video_path, secondExtract, downscaleOutput, outputFolder):
+    video_filename = video_path.split("/")[-1]
+    frames_folder_outer = os.path.dirname(os.path.abspath(__file__)) + "/extractedFrames/"
+    frames_folder = frames_folder_outer + video_filename.split(".")[0] + "_frames"
+    # Read the video from specified path
+
+
+    cam = cv2.VideoCapture(video_path)
+    totalFrames = int(cam.get(cv2.CAP_PROP_FRAME_COUNT))
+    fps = cam.get(cv2.CAP_PROP_FPS)
+
+    duration = totalFrames/fps
+
+            
+    cutStartFrames = fps * secondExtract
+
+
+    if totalFrames < cutStartFrames:
+        print("All the frames are cut out")
+        return 
+    
+    currentframe = 0
+    while(True):
+        # reading from frame
+        ret,frame = cam.read()
+        if not ret:
+            break
+        if currentframe <= cutStartFrames:
+            currentframe += 1
+            continue
+        width = int(frame.shape[1] * downscaleOutput)
+        height = int(frame.shape[0] * downscaleOutput)
+        dsize = (width, height)
+        img = cv2.resize(frame, dsize)
+        newName = video_filename.split(".")[0] + "_static_thumbnail.jpg"
+        cv2.imwrite(outputFolder + newName, img)
+        break
+    
+    
 def predictBrisque(image_path):
     img = cv2.imread(image_path)
     brisqueScore = brisque.score(img)
