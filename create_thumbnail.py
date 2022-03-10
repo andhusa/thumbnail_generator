@@ -23,19 +23,20 @@ modelFile = current_path + "/models/res10_300x300_ssd_iter_140000.caffemodel"
 configFile = current_path + "/models/deploy.prototxt.txt"
 thumbnail_output = current_path + "/thumbnail_output/"
 excluded_images = current_path + "/excluded_images/"
+surmaLogoModel = current_path + '/models/logo_detection.h5'
+surmaCloseupModel = current_path + '/models/close_up_model.h5'
 
 haarStr = "haar"
 dlibStr = "dlib"
 mtcnnStr = "mtcnn"
 dnnStr = "dnn"
+surmaStr = "surma"
 
 #The probability score the image classifying model gives, is depending on which class it is basing the score on.
 #It could be switched
 close_up_model_inverted = False
 
-runCloseUpDetection = True
-
-def main(close_up_model, logo_detection_model):
+def main():
     #Default values
     close_up_threshold = 0.75
     brisque_threshold = 35
@@ -51,9 +52,31 @@ def main(close_up_model, logo_detection_model):
     beforeAnnotationSecondsCut = None
     afterAnnotationSecondsCut = None
     staticThumbnailSec = None
+    logo_model_name = surmaStr
+    logo_detection_model = ""
+    close_up_model_name = surmaStr
+    close_up_model = ""
 
     parser = argparse.ArgumentParser(description="Thumbnail generator")
     parser.add_argument("destination", nargs=1, help="Destination of the input to be processed. Can be file or folder")
+
+    #Logo detection models
+    logoGroup = parser.add_mutually_exclusive_group(required=False)
+    logoGroup.add_argument("-Lsurma", action='store_true', help="Surma model used for logo detection.")
+    logoGroup.add_argument("-xl", "--xLogoDetection", default=True, action="store_false", help="Don't run logo detection")
+
+    #Close-up detection models
+    closeupGroup = parser.add_mutually_exclusive_group(required=False)
+    closeupGroup.add_argument("-Csurma", action='store_true', help="Surma model used for close-up detection.")
+    closeupGroup.add_argument("-xc", "--xCloseupDetection", default=True, action="store_false", help="Don't run close-up detection")
+
+    #IQA models
+    iqaGroup = parser.add_mutually_exclusive_group(required=False)
+    iqaGroup.add_argument("-IQAocampo", action='store_true', help="Ocampo model used for image quality assessment.")
+    iqaGroup.add_argument("-xi", "--xIQA", default=True, action="store_false", help="Don't run image quality prediction")
+
+
+    #Face models
     faceGroup = parser.add_mutually_exclusive_group(required = False)
     faceGroup.add_argument("-dlib", action='store_true', help="Dlib detection model is slow, but presice.")
     faceGroup.add_argument("-haar", action='store_true', help="Haar detection model is fast, but unprecise.")
@@ -62,8 +85,6 @@ def main(close_up_model, logo_detection_model):
 
     #Flags that excludes models running
     faceGroup.add_argument("-xf", "--xFaceDetection", default=True, action="store_false", help="Don't run the face detection")
-    parser.add_argument("-xi", "--xIQA", default=True, action="store_false", help="Don't run image quality prediction")
-    parser.add_argument("-xl", "--xLogoDetection", default=True, action="store_false", help="Don't run logo detection")
 
     #Flags fixing default values
     parser.add_argument("-cuthr", "--closeUpThreshold", type=restricted_float, default=[close_up_threshold], nargs=1, help="The threshold value for the close-up detection model. The value must be between 0 and 1. The default is: " + str(close_up_threshold))
@@ -88,6 +109,12 @@ def main(close_up_model, logo_detection_model):
     runFaceDetection = args.xFaceDetection
     runIQA = args.xIQA
     runLogoDetection = args.xLogoDetection
+    if not runLogoDetection:
+        logo_model_name = ""
+    runCloseUpDetection = args.xCloseupDetection
+    if not runCloseUpDetection:
+        close_up_model_name = ""
+
     close_up_threshold = args.closeUpThreshold[0]
     brisque_threshold = args.brisqueThreshold[0]
     cutStartSeconds = args.cutStartSeconds[0]
@@ -129,10 +156,10 @@ def main(close_up_model, logo_detection_model):
         processFolder = True
         if destination[-1] != "/":
             destination = destination + "/"
-        print("isfolder")
+        print("is folder")
     elif os.path.isfile(destination):
         processFile = True
-        print("isfile")
+        print("is file")
     else:
         print("Error: The input destination was neither file or directory")
         return
@@ -149,28 +176,28 @@ def main(close_up_model, logo_detection_model):
         get_static(destination, staticThumbnailSec, downscaleOutput, thumbnail_output)
         return
 
-    close_up_model = keras.models.load_model(close_up_model)
+    if close_up_model_name == surmaStr:
+        close_up_model = keras.models.load_model(surmaCloseupModel)
 
-
-    if runLogoDetection:
-        logo_detection_model = keras.models.load_model(logo_detection_model)
+    if logo_model_name == surmaStr:
+        logo_detection_model = keras.models.load_model(surmaLogoModel)
 
     if processFile:
         name, ext = os.path.splitext(destination)
         if ext == ".ts" or ext == ".mp4":
-            create_thumbnail(name + ext, downscaleOutput, downscaleOnProcessing, close_up_model, logo_detection_model, faceDetModel, runFaceDetection, runIQA, runLogoDetection, close_up_threshold, brisque_threshold, cutStartSeconds, cutEndSeconds, totalFramesToExtract, fpsExtract, framerateExtract, annotationSecond, beforeAnnotationSecondsCut, afterAnnotationSecondsCut)
+            create_thumbnail(name + ext, downscaleOutput, downscaleOnProcessing, close_up_model, logo_detection_model, faceDetModel, runFaceDetection, runIQA, runLogoDetection, runCloseUpDetection, close_up_threshold, brisque_threshold, cutStartSeconds, cutEndSeconds, totalFramesToExtract, fpsExtract, framerateExtract, annotationSecond, beforeAnnotationSecondsCut, afterAnnotationSecondsCut)
     elif processFolder:
 
         for f in os.listdir(destination):
             name, ext = os.path.splitext(f)
             print(name + ext)
             if ext == ".ts" or ext == ".mp4":
-                create_thumbnail(destination + name + ext,downscaleOutput , downscaleOnProcessing, close_up_model, logo_detection_model, faceDetModel, runFaceDetection, runIQA, runLogoDetection, close_up_threshold, brisque_threshold, cutStartSeconds, cutEndSeconds, totalFramesToExtract, fpsExtract, framerateExtract, annotationSecond, beforeAnnotationSecondsCut, afterAnnotationSecondsCut)
+                create_thumbnail(destination + name + ext,downscaleOutput , downscaleOnProcessing, close_up_model, logo_detection_model, faceDetModel, runFaceDetection, runIQA, runLogoDetection, runCloseUpDetection, close_up_threshold, brisque_threshold, cutStartSeconds, cutEndSeconds, totalFramesToExtract, fpsExtract, framerateExtract, annotationSecond, beforeAnnotationSecondsCut, afterAnnotationSecondsCut)
 
 
 
 
-def create_thumbnail(video_path, downscaleOutput, downscaleOnProcessing, close_up_model, logo_detection_model, faceDetModel, runFaceDetection, runIQA, runLogoDetection, close_up_threshold, brisque_threshold, cutStartSeconds, cutEndSeconds, totalFramesToExtract, fpsExtract, framerateExtract, annotationSecond, beforeAnnotationSecondsCut, afterAnnotationSecondsCut):
+def create_thumbnail(video_path, downscaleOutput, downscaleOnProcessing, close_up_model, logo_detection_model, faceDetModel, runFaceDetection, runIQA, runLogoDetection, runCloseUpDetection, close_up_threshold, brisque_threshold, cutStartSeconds, cutEndSeconds, totalFramesToExtract, fpsExtract, framerateExtract, annotationSecond, beforeAnnotationSecondsCut, afterAnnotationSecondsCut):
     video_filename = video_path.split("/")[-1]
     frames_folder_outer = os.path.dirname(os.path.abspath(__file__)) + "/extractedFrames/"
     frames_folder = frames_folder_outer + video_filename.split(".")[0] + "_frames"
@@ -244,7 +271,7 @@ def create_thumbnail(video_path, downscaleOutput, downscaleOnProcessing, close_u
 
         currentframe += 1
 
-    priority_images = groupFrames(frames_folder, close_up_model, logo_detection_model ,faceDetModel, runFaceDetection, runIQA, runLogoDetection, close_up_threshold, brisque_threshold)
+    priority_images = groupFrames(frames_folder, close_up_model, logo_detection_model ,faceDetModel, runFaceDetection, runIQA, runLogoDetection, runCloseUpDetection, close_up_threshold, brisque_threshold)
     finalThumbnail = ""
     excluded = []
 
@@ -326,18 +353,21 @@ def create_thumbnail(video_path, downscaleOutput, downscaleOnProcessing, close_u
         return
     return
 
-def groupFrames(frames_folder, close_up_model, logo_detection_model, faceDetModel, runFaceDetection, runIQA, runLogoDetection, close_up_threshold, brisque_threshold):
-    test_data_generator = ImageDataGenerator(rescale=1./255)
-    IMAGE_SIZE = 200
-    TEST_SIZE = len(next(os.walk(frames_folder + "/frames"))[2])
-    print("TEST SIZE: " + str(TEST_SIZE))
-    IMAGE_WIDTH, IMAGE_HEIGHT = IMAGE_SIZE, IMAGE_SIZE
-    test_generator = test_data_generator.flow_from_directory(
-            frames_folder,
-            target_size=(IMAGE_WIDTH, IMAGE_HEIGHT),
-            batch_size=1,
-            class_mode="binary",
-            shuffle=False)
+def groupFrames(frames_folder, close_up_model, logo_detection_model, faceDetModel, runFaceDetection, runIQA, runLogoDetection, runCloseUpDetection, close_up_threshold, brisque_threshold):
+    test_generator = None
+    TEST_SIZE = 0
+    if runCloseUpDetection or runLogoDetection:
+        test_data_generator = ImageDataGenerator(rescale=1./255)
+        IMAGE_SIZE = 200
+        TEST_SIZE = len(next(os.walk(frames_folder + "/frames"))[2])
+        print("TEST SIZE: " + str(TEST_SIZE))
+        IMAGE_WIDTH, IMAGE_HEIGHT = IMAGE_SIZE, IMAGE_SIZE
+        test_generator = test_data_generator.flow_from_directory(
+                frames_folder,
+                target_size=(IMAGE_WIDTH, IMAGE_HEIGHT),
+                batch_size=1,
+                class_mode="binary",
+                shuffle=False)
 
     logos = []
     if runLogoDetection:
@@ -348,22 +378,40 @@ def groupFrames(frames_folder, close_up_model, logo_detection_model, faceDetMode
             image_path = frames_folder + "/" + test_generator.filenames[index]
             if probability > 0.1:
                 logos.append(image_path)
-    probabilities = close_up_model.predict_generator(test_generator, TEST_SIZE)
 
     priority_images = [{} for x in range(4)]
+    if runCloseUpDetection:
+        probabilities = close_up_model.predict_generator(test_generator, TEST_SIZE)
 
-    for index, probability in enumerate(probabilities):
+        for index, probability in enumerate(probabilities):
 
-        #The probability score is inverted:
-        if close_up_model_inverted:
-            probability = 1 - probability
+            #The probability score is inverted:
+            if close_up_model_inverted:
+                probability = 1 - probability
 
-        image_path = frames_folder + "/" + test_generator.filenames[index]
+                image_path = frames_folder + "/" + test_generator.filenames[index]
 
-        if image_path in logos:
-            priority_images[3][image_path] = probability
+                if image_path in logos:
+                    priority_images[3][image_path] = probability
 
-        elif probability > close_up_threshold:
+            elif probability > close_up_threshold:
+                if runFaceDetection:
+                    face_size = detect_faces(image_path, faceDetModel)
+                    if face_size > 0:
+                        priority_images[0][image_path] = face_size
+                    else:
+                        priority_images[1][image_path] = probability
+                else:
+                    priority_images[1][image_path] = probability
+            else:
+                priority_images[2][image_path] = probability
+    else:
+        probability = 1
+        frames_folder = frames_folder + "/frames/"
+        for image in os.listdir(frames_folder):
+            image_path = frames_folder + image
+            if image_path in logos:
+                priority_images[3][image_path] = probability
             if runFaceDetection:
                 face_size = detect_faces(image_path, faceDetModel)
                 if face_size > 0:
@@ -372,9 +420,6 @@ def groupFrames(frames_folder, close_up_model, logo_detection_model, faceDetMode
                     priority_images[1][image_path] = probability
             else:
                 priority_images[1][image_path] = probability
-        else:
-            priority_images[2][image_path] = probability
-
     return priority_images
 
 def get_static(video_path, secondExtract, downscaleOutput, outputFolder):
@@ -523,6 +568,4 @@ def above_zero_int(x):
 
 
 if __name__ == "__main__":
-    close_up_model = current_path + '/models/close_up_model.h5'
-    logo_detection_model = current_path + '/models/logo_detection.h5'
-    main(close_up_model, logo_detection_model)
+    main()
