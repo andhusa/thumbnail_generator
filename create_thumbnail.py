@@ -68,17 +68,17 @@ def main():
 
     #Logo detection models
     logoGroup = parser.add_mutually_exclusive_group(required=False)
-    logoGroup.add_argument("-Lsurma", action='store_true', help="Surma model used for logo detection.")
+    logoGroup.add_argument("-LSurma", action='store_true', help="Surma model used for logo detection.")
     logoGroup.add_argument("-xl", "--xLogoDetection", default=True, action="store_false", help="Don't run logo detection")
 
     #Close-up detection models
     closeupGroup = parser.add_mutually_exclusive_group(required=False)
-    closeupGroup.add_argument("-Csurma", action='store_true', help="Surma model used for close-up detection.")
+    closeupGroup.add_argument("-CSurma", action='store_true', help="Surma model used for close-up detection.")
     closeupGroup.add_argument("-xc", "--xCloseupDetection", default=True, action="store_false", help="Don't run close-up detection")
 
     #IQA models
     iqaGroup = parser.add_mutually_exclusive_group(required=False)
-    iqaGroup.add_argument("-IQAocampo", action='store_true', help="Ocampo model used for image quality assessment.")
+    iqaGroup.add_argument("-IQAOcampo", action='store_true', help="Ocampo model used for image quality assessment.")
     iqaGroup.add_argument("-xi", "--xIQA", default=True, action="store_false", help="Don't run image quality prediction")
 
 
@@ -141,7 +141,7 @@ def main():
     runLogoDetection = args.xLogoDetection
     if not runLogoDetection:
         logo_model_name = ""
-    if args.Lsurma:
+    if args.LSurma:
         logo_model_name = surmaStr
     logo_threshold = args.logoThreshold[0]
 
@@ -149,7 +149,7 @@ def main():
     runCloseUpDetection = args.xCloseupDetection
     if not runCloseUpDetection:
         close_up_model_name = ""
-    if args.Csurma:
+    if args.CSurma:
         close_up_model_name = surmaStr
     close_up_threshold = args.closeUpThreshold[0]
 
@@ -170,7 +170,7 @@ def main():
     runIQA = args.xIQA
     if not runIQA:
         iqa_model_name = ""
-    if args.IQAocampo:
+    if args.IQAOcampo:
         iqa_model_name = ocampoStr
     brisque_threshold = args.brisqueThreshold[0]
 
@@ -273,9 +273,6 @@ def create_thumbnail(video_path, downscaleOutput, downscaleOnProcessing, close_u
     currentframe = 0
     # frames to skip
     frame_skip = (totalFrames-(cutStartFrames + cutEndFrames))//totalFramesToExtract
-    print(totalFrames)
-    print(totalFramesToExtract)
-    print(frame_skip)
     numFramesExtracted = 0
     stopFrame = totalFrames-cutEndFrames
     while(True):
@@ -289,7 +286,6 @@ def create_thumbnail(video_path, downscaleOutput, downscaleOnProcessing, close_u
             currentframe += 1
             continue
         if currentframe % frame_skip == 0 and numFramesExtracted < totalFramesToExtract:
-            print(currentframe)
             # if video is still left continue creating images
             name = frames_folder + '/frames/frame' + str(currentframe) + '.jpg'
             width = int(frame.shape[1] * downscaleOnProcessing)

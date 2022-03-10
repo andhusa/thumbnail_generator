@@ -30,28 +30,22 @@ def generate():
 
 	downsamplingAlt = ["-nfe " + numFramesExtractVar.get(), "-fre " + downsamplingRatioVar.get(), "-fps " + fpsVar.get()]
 	downsamplingStr = downsamplingAlt[down_sampling_var.get()-1]
+
 	internalProcessingStr = ""
 	if internalProcessingVar.get():
 		internalProcessingStr = "-ds " + str(float(internalProcessingVar.get())/100)
+
 	outputImageStr = ""
 	if outputImageVar.get():
 		outputImageStr = "-dso " + str(float(outputImageVar.get())/100)
 
-	runLogoStr = "-xl" if not runLogoVar.get() else ""
-	if runLogoStr == "":
-		pass
+	runLogoStr = "-xl" if not runLogoVar.get() else "-L" + logoVar.get() + " -logothr " + str(float(logoThresholdVar.get())/100)
 
-	runCloseup = "" if not runcloseupVar.get() else "-cuthr " + str(float(closeupThresholdVar.get())/100)
-	if runCloseup == "":
-		pass
+	runCloseup = "" if not runcloseupVar.get() else "-C" + closeupVar.get() + " -cuthr " + str(float(closeupThresholdVar.get())/100)
 
 	runFaceStr = "-xf" if not runFaceVar.get() else "-" + faceVar.get()
 
-	runIQAStr = "-xi" if not runIQAVar.get() else "-brthr " + brisqueVar.get()
-
-
-
-
+	runIQAStr = "-xi" if not runIQAVar.get() else "-IQA" + iqaVar.get() + " -brthr " + brisqueVar.get()
 
 	runStatic = "python create_thumbnail.py %s -st 4\n" % (filePath)
 	os.system(runStatic)
