@@ -47,12 +47,14 @@ def generate():
 
 	runIQAStr = "-xi" if not runIQAVar.get() else "-IQA" + iqaVar.get() + " -brthr " + brisqueVar.get()
 
+	runBlurStr = "-xb" if not runBlurVar.get() else "-B" + blurVar.get() + " -blurthr " + blurThresholdVar.get()
+
 	runStatic = "python create_thumbnail.py %s -st 4\n" % (filePath)
 	try:
 		#subprocess.run([runStatic], check = True)
 		if os.system(runStatic) != 0:
 			raise Exception('runStatic did not work')
-		runMLbased = 'python create_thumbnail.py %s %s %s %s %s %s %s %s %s %s %s\n' % (filePath, annotationStr, csStr, ceStr, downsamplingStr, internalProcessingStr, outputImageStr, runLogoStr, runCloseup, runFaceStr, runIQAStr)
+		runMLbased = 'python create_thumbnail.py %s %s %s %s %s %s %s %s %s %s %s %s\n' % (filePath, annotationStr, csStr, ceStr, downsamplingStr, internalProcessingStr, outputImageStr, runLogoStr, runCloseup, runFaceStr, runIQAStr, runBlurStr)
 		print(runMLbased)
 		if os.system(runMLbased) != 0:
 			raise Exception('runMLbased did not work')
@@ -72,16 +74,6 @@ def generate():
 		canvas1.create_image(20,20, anchor=NW, image=photoImgS)
 	except:
 		print("Creating thumbnail did not work with the given arguments")
-
-
-
-	#os.system(runStatic)
-	#runMLbased = 'python create_thumbnail.py %s %s %s %s %s %s %s %s %s %s %s\n' % (filePath, annotationStr, csStr, ceStr, downsamplingStr, internalProcessingStr, outputImageStr, runLogoStr, runCloseup, runFaceStr, runIQAStr)
-	#print(runMLbased)
-	#os.system(runMLbased)
-
-
-
 
 def open_file():
 	video_file = askopenfilename()
@@ -228,7 +220,7 @@ closeupThresholdVar = tk.Entry(close_up_shot_detection, width=5)
 
 faceDropDown = tk.OptionMenu(face_detection, faceVar, "haar", "dlib", "mtcnn", "dnn")
 logoDropDown = tk.OptionMenu(logo_detection, logoVar, "Surma", "Ocampo")
-blurDropDown = tk.OptionMenu(blur_detection, blurVar, "SVD", "Laplacian")
+blurDropDown = tk.OptionMenu(blur_detection, blurVar, "SVD")
 iqaDropDown = tk.OptionMenu(image_quality_prediction, iqaVar, "Ocampo")
 closeupDropDown = tk.OptionMenu(close_up_shot_detection, closeupVar, "Surma")
 fileName = tk.Entry(file_processing)

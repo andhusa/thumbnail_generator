@@ -40,7 +40,6 @@ close_up_model_inverted = False
 def main():
     #Default values
     close_up_threshold = 0.75
-    brisque_threshold = 35
     totalFramesToExtract = 50
     faceDetModel = dlibStr
     framerateExtract = None
@@ -59,26 +58,33 @@ def main():
     close_up_model_name = surmaStr
     close_up_model = ""
     iqa_model_name = ocampoStr
-    #blur_detection_name = svdStr
-    #blur_detection_threshold = 60
+    brisque_threshold = 35
+    blur_model_name = svdStr
+    blur_threshold = 0.6
 
     parser = argparse.ArgumentParser(description="Thumbnail generator")
-    parser.add_argument("destination", nargs=1, help="Destination of the input to be processed. Can be file or folder")
+    parser.add_argument("destination", nargs=1, help="Destination of the input to be processed. Can be file or folder.")
 
     #Logo detection models
     logoGroup = parser.add_mutually_exclusive_group(required=False)
     logoGroup.add_argument("-LSurma", action='store_true', help="Surma model used for logo detection.")
-    logoGroup.add_argument("-xl", "--xLogoDetection", default=True, action="store_false", help="Don't run logo detection")
+    logoGroup.add_argument("-xl", "--xLogoDetection", default=True, action="store_false", help="Don't run logo detection.")
 
     #Close-up detection models
     closeupGroup = parser.add_mutually_exclusive_group(required=False)
     closeupGroup.add_argument("-CSurma", action='store_true', help="Surma model used for close-up detection.")
-    closeupGroup.add_argument("-xc", "--xCloseupDetection", default=True, action="store_false", help="Don't run close-up detection")
+    closeupGroup.add_argument("-xc", "--xCloseupDetection", default=True, action="store_false", help="Don't run close-up detection.")
 
     #IQA models
     iqaGroup = parser.add_mutually_exclusive_group(required=False)
     iqaGroup.add_argument("-IQAOcampo", action='store_true', help="Ocampo model used for image quality assessment.")
-    iqaGroup.add_argument("-xi", "--xIQA", default=True, action="store_false", help="Don't run image quality prediction")
+    iqaGroup.add_argument("-xi", "--xIQA", default=True, action="store_false", help="Don't run image quality prediction.")
+
+    #Blur detection models
+    blurGroup = parser.add_mutually_exclusive_group(required=False)
+    blurGroup.add_argument("-BSVD", action='store_true', help="SVD method used for blur detection.")
+    blurGroup.add_argument("-BLaplacian", action='store_true', help="Laplacian method used for blur detection.")
+    blurGroup.add_argument("-xb", "--xBlurDetection", default=True, action="store_false", help="Don't run blur detection.")
 
 
     #Face models
@@ -87,14 +93,13 @@ def main():
     faceGroup.add_argument("-haar", action='store_true', help="Haar detection model is fast, but unprecise.")
     faceGroup.add_argument("-mtcnn", action='store_true', help="MTCNN detection model is slow, but precise.")
     faceGroup.add_argument("-dnn", action='store_true', help="DNN detection model is fast and precise.")
-
-    #Flags that excludes models running
-    faceGroup.add_argument("-xf", "--xFaceDetection", default=True, action="store_false", help="Don't run the face detection")
+    faceGroup.add_argument("-xf", "--xFaceDetection", default=True, action="store_false", help="Don't run the face detection.")
 
     #Flags fixing default values
     parser.add_argument("-cuthr", "--closeUpThreshold", type=restricted_float, default=[close_up_threshold], nargs=1, help="The threshold value for the close-up detection model. The value must be between 0 and 1. The default is: " + str(close_up_threshold))
     parser.add_argument("-brthr", "--brisqueThreshold", type=float, default=[brisque_threshold], nargs=1, help="The threshold value for the image quality predictor model. The default is: " + str(brisque_threshold))
     parser.add_argument("-logothr", "--logoThreshold", type=restricted_float, default=[logo_threshold], nargs=1, help="The threshold value for the logo detection model. The value must be between 0 and 1. The default value is: " + str(logo_threshold))
+    parser.add_argument("-blurthr", "--blurThreshold", type=restricted_float, default=[blur_threshold], nargs=1, help="The threshold value for the blur detection model. The default value is: " + str(blur_threshold))
     parser.add_argument("-css", "--cutStartSeconds", type=positive_int, default=[cutStartSeconds], nargs=1, help="The number of seconds to cut from start of the video. These seconds of video will not be processed in the thumbnail selection. The default value is: " + str(cutStartSeconds))
     parser.add_argument("-ces", "--cutEndSeconds", type=positive_int, default=[cutEndSeconds], nargs=1, help="The number of seconds to cut from the end of the video. These seconds of video will not be processed in the thumbnail selection. The default value is: " + str(cutEndSeconds))
     numFrameExtractGroup = parser.add_mutually_exclusive_group(required = False)
@@ -173,8 +178,14 @@ def main():
         iqa_model_name = ocampoStr
     brisque_threshold = args.brisqueThreshold[0]
 
-    #Blur--
-
+    runBlur = args.xBlurDetection
+    if not runBlur:
+        blur_model_name = ""
+    if args.BSVD:
+        blur_model_name = svdStr
+    elif args.BLaplacian:
+        blur_model_name = svdStr
+    blur_threshold = args.blurThreshold[0]
 
     processFolder = False
     processFile = False
@@ -187,7 +198,7 @@ def main():
         processFile = True
         print("is file")
         name, ext = os.path.splitext(destination)
-        if ext != ".ts" or ext != ".mp4":
+        if ext != ".ts" and ext != ".mp4":
             raise Exception("The input file is not a video file")
     else:
         raise Exception("The input destination was neither file or directory")
@@ -212,17 +223,17 @@ def main():
 
     if processFile:
         name, ext = os.path.splitext(destination)
-        create_thumbnail(name + ext, downscaleOutput, downscaleOnProcessing, close_up_model, logo_detection_model, faceDetModel, runFaceDetection, runIQA, iqa_model_name, runLogoDetection, runCloseUpDetection, close_up_threshold, brisque_threshold, logo_threshold, cutStartSeconds, cutEndSeconds, totalFramesToExtract, fpsExtract, framerateExtract, annotationSecond, beforeAnnotationSecondsCut, afterAnnotationSecondsCut)
+        create_thumbnail(name + ext, downscaleOutput, downscaleOnProcessing, close_up_model, logo_detection_model, faceDetModel, runFaceDetection, runBlur, blur_model_name, blur_threshold, runIQA, iqa_model_name, runLogoDetection, runCloseUpDetection, close_up_threshold, brisque_threshold, logo_threshold, cutStartSeconds, cutEndSeconds, totalFramesToExtract, fpsExtract, framerateExtract, annotationSecond, beforeAnnotationSecondsCut, afterAnnotationSecondsCut)
     elif processFolder:
         for f in os.listdir(destination):
             name, ext = os.path.splitext(f)
             if ext == ".ts" or ext == ".mp4":
-                create_thumbnail(destination + name + ext,downscaleOutput , downscaleOnProcessing, close_up_model, logo_detection_model, faceDetModel, runFaceDetection, runIQA, iqa_model_name, runLogoDetection, runCloseUpDetection, close_up_threshold, brisque_threshold, logo_threshold, cutStartSeconds, cutEndSeconds, totalFramesToExtract, fpsExtract, framerateExtract, annotationSecond, beforeAnnotationSecondsCut, afterAnnotationSecondsCut)
+                create_thumbnail(destination + name + ext,downscaleOutput , downscaleOnProcessing, close_up_model, logo_detection_model, faceDetModel, runFaceDetection, runBlur, blur_model_name, blur_threshold, runIQA, iqa_model_name, runLogoDetection, runCloseUpDetection, close_up_threshold, brisque_threshold, logo_threshold, cutStartSeconds, cutEndSeconds, totalFramesToExtract, fpsExtract, framerateExtract, annotationSecond, beforeAnnotationSecondsCut, afterAnnotationSecondsCut)
 
 
 
 
-def create_thumbnail(video_path, downscaleOutput, downscaleOnProcessing, close_up_model, logo_detection_model, faceDetModel, runFaceDetection, runIQA, iqa_model_name, runLogoDetection, runCloseUpDetection, close_up_threshold, brisque_threshold, logo_threshold, cutStartSeconds, cutEndSeconds, totalFramesToExtract, fpsExtract, framerateExtract, annotationSecond, beforeAnnotationSecondsCut, afterAnnotationSecondsCut):
+def create_thumbnail(video_path, downscaleOutput, downscaleOnProcessing, close_up_model, logo_detection_model, faceDetModel, runFaceDetection, runBlur, blur_model_name, blur_threshold, runIQA, iqa_model_name, runLogoDetection, runCloseUpDetection, close_up_threshold, brisque_threshold, logo_threshold, cutStartSeconds, cutEndSeconds, totalFramesToExtract, fpsExtract, framerateExtract, annotationSecond, beforeAnnotationSecondsCut, afterAnnotationSecondsCut):
     video_filename = video_path.split("/")[-1]
     frames_folder_outer = os.path.dirname(os.path.abspath(__file__)) + "/extractedFrames/"
     frames_folder = frames_folder_outer + video_filename.split(".")[0] + "_frames"
@@ -295,7 +306,7 @@ def create_thumbnail(video_path, downscaleOutput, downscaleOnProcessing, close_u
 
         currentframe += 1
 
-    priority_images = groupFrames(frames_folder, close_up_model, logo_detection_model ,faceDetModel, runFaceDetection, runIQA, iqa_model_name, runLogoDetection, runCloseUpDetection, close_up_threshold, brisque_threshold, logo_threshold)
+    priority_images = groupFrames(frames_folder, close_up_model, logo_detection_model, faceDetModel, runFaceDetection, runLogoDetection, runCloseUpDetection, close_up_threshold, logo_threshold)
     finalThumbnail = ""
     excluded = []
 
@@ -304,48 +315,45 @@ def create_thumbnail(video_path, downscaleOutput, downscaleOnProcessing, close_u
             break
         priority = dict(sorted(priority.items(), key=lambda item: item[1], reverse=True))
 
-        '''
-        Blur detection not added:
+        blur_filtered = []
+        if runBlur:
+            if blur_model_name == svdStr:
+                for image in priority:
+                    blur_score = get_blur_degree(image)
+                    print(image +" " +  str(blur_score))
+                    if blur_score < blur_threshold:
+                        blur_filtered.append(image)
+        else:
+            for image in priority:
+                blur_filtered.append(image)
 
-        bestScore = 0
-        blur_threshold = 0.6
-        for key in priority:
-            score = get_blur_degree(key)
-
-            if finalThumbnail == "":
-                bestScore = score
-                finalThumbnail = key
-
-            if score < blur_threshold:
-                #finalThumbnail = key
-                brisqueScore = predictBrisque(key)
-                if brisqueScore < brisque_threshold:
-                    finalThumbnail = key
-                    break
-
-            if score < bestScore:
-                bestScore = score
-                finalThumbnail = key
-
-        '''
+        print(blur_filtered)
 
         if runIQA:
             if iqa_model_name == ocampoStr:
                 bestScore = 0
-                for key in priority:
-                    score = predictBrisque(key)
+                for image in blur_filtered:
+                    score = predictBrisque(image)
+                    print(image + " " + str(score))
                     if finalThumbnail == "":
                         bestScore = score
-                        finalThumbnail = key
+                        finalThumbnail = image
                     if score < brisque_threshold:
-                        finalThumbnail = key
+                        finalThumbnail = image
                         break
                     if score < bestScore:
                         bestScore = score
-                        finalThumbnail = key
+                        finalThumbnail = image
         else:
-            for key in priority:
-                finalThumbnail = key
+            for image in blur_filtered:
+                finalThumbnail = image
+                break
+    if finalThumbnail == "":
+        for priority in priority_images:
+            if finalThumbnail != "":
+                break
+            for image in priority:
+                finalThumbnail = image
                 break
 
     if finalThumbnail != "":
@@ -378,7 +386,7 @@ def create_thumbnail(video_path, downscaleOutput, downscaleOnProcessing, close_u
         return
     return
 
-def groupFrames(frames_folder, close_up_model, logo_detection_model, faceDetModel, runFaceDetection, runIQA, iqa_model_name, runLogoDetection, runCloseUpDetection, close_up_threshold, brisque_threshold, logo_threshold):
+def groupFrames(frames_folder, close_up_model, logo_detection_model, faceDetModel, runFaceDetection, runLogoDetection, runCloseUpDetection, close_up_threshold, logo_threshold):
     test_generator = None
     TEST_SIZE = 0
     if runCloseUpDetection or runLogoDetection:
