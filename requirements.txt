@@ -1,0 +1,5 @@
+opencv-python
+image-quality
+dlib
+mtcnn
+numpy

@@ -9,7 +9,6 @@ from os.path import isfile, isdir
 import shutil
 import imquality.brisque as brisque
 import dlib
-import time
 from mtcnn.mtcnn import MTCNN
 
 folder_path = "/global/D1/projects/soccer_clipping/events-Allsvenskan2019-minus15-pluss25/"
