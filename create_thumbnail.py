@@ -60,7 +60,7 @@ def main():
     iqa_model_name = ocampoStr
     brisque_threshold = 35
     blur_model_name = svdStr
-    blur_threshold = 0.6
+    blur_threshold = 0.65
 
     parser = argparse.ArgumentParser(description="Thumbnail generator")
     parser.add_argument("destination", nargs=1, help="Destination of the input to be processed. Can be file or folder.")
@@ -320,6 +320,7 @@ def create_thumbnail(video_path, downscaleOutput, downscaleOnProcessing, close_u
             if blur_model_name == svdStr:
                 for image in priority:
                     blur_score = get_blur_degree(image)
+                    print(image + " blur: " + str(blur_score))
                     if blur_score < blur_threshold:
                         blur_filtered.append(image)
         else:
@@ -327,11 +328,15 @@ def create_thumbnail(video_path, downscaleOutput, downscaleOnProcessing, close_u
                 blur_filtered.append(image)
 
 
+
+        print(blur_filtered)
+
         if runIQA:
             if iqa_model_name == ocampoStr:
                 bestScore = 0
                 for image in blur_filtered:
                     score = predictBrisque(image)
+                    print(image + " brisque: " + str(score))
                     if finalThumbnail == "":
                         bestScore = score
                         finalThumbnail = image
@@ -376,7 +381,8 @@ def create_thumbnail(video_path, downscaleOutput, downscaleOnProcessing, close_u
         #secInVid = (frameNum / totalFrames) * duration
 
         try:
-            shutil.rmtree(frames_folder_outer)
+            pass
+            #shutil.rmtree(frames_folder_outer)
 
         except OSError as e:
             print("Error: %s - %s." % (e.filename, e.strerror))
