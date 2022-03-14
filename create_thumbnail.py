@@ -320,21 +320,18 @@ def create_thumbnail(video_path, downscaleOutput, downscaleOnProcessing, close_u
             if blur_model_name == svdStr:
                 for image in priority:
                     blur_score = get_blur_degree(image)
-                    print(image +" " +  str(blur_score))
                     if blur_score < blur_threshold:
                         blur_filtered.append(image)
         else:
             for image in priority:
                 blur_filtered.append(image)
 
-        print(blur_filtered)
 
         if runIQA:
             if iqa_model_name == ocampoStr:
                 bestScore = 0
                 for image in blur_filtered:
                     score = predictBrisque(image)
-                    print(image + " " + str(score))
                     if finalThumbnail == "":
                         bestScore = score
                         finalThumbnail = image
@@ -393,7 +390,6 @@ def groupFrames(frames_folder, close_up_model, logo_detection_model, faceDetMode
         test_data_generator = ImageDataGenerator(rescale=1./255)
         IMAGE_SIZE = 200
         TEST_SIZE = len(next(os.walk(frames_folder + "/frames"))[2])
-        print("TEST SIZE: " + str(TEST_SIZE))
         IMAGE_WIDTH, IMAGE_HEIGHT = IMAGE_SIZE, IMAGE_SIZE
         test_generator = test_data_generator.flow_from_directory(
                 frames_folder,
