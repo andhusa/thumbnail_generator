@@ -7,51 +7,57 @@ from os.path import exists
 import subprocess
 
 def generate():
-	filePath = fileName.get()
-	if not exists(filePath):
-		print("File doesn't exist!")
-		return
-	filename = filePath.split('/')[-1]
-	name, ext = os.path.splitext(filename)
 
-	print("Number frames to extract: %s\nFace detection model: %s\nFilename: %s" % (numFramesExtractVar.get(), faceVar.get(), fileName.get()))
-
-	annotationStr = ""
-	if annotationMarkVar.get():
-		annotationStr = "-as " + annotationMarkVar.get()
-		if beforeAnnotationVar.get():
-			annotationStr += " -bac " + beforeAnnotationVar.get()
-		if afterAnnotationVar.get():
-			annotationStr += " -aac " + afterAnnotationVar.get()
-
-	csStr = "-css " + cutStartVar.get()
-	ceStr = "-ces " + cutEndVar.get()
-
-
-	downsamplingAlt = ["-nfe " + numFramesExtractVar.get(), "-fre " + downsamplingRatioVar.get(), "-fps " + fpsVar.get()]
-	downsamplingStr = downsamplingAlt[down_sampling_var.get()-1]
-
-	internalProcessingStr = ""
-	if internalProcessingVar.get():
-		internalProcessingStr = "-ds " + str(float(internalProcessingVar.get())/100)
-
-	outputImageStr = ""
-	if outputImageVar.get():
-		outputImageStr = "-dso " + str(float(outputImageVar.get())/100)
-
-	runLogoStr = "-xl" if not runLogoVar.get() else "-L" + logoVar.get() + " -logothr " + str(float(logoThresholdVar.get())/100)
-
-	runCloseup = "" if not runcloseupVar.get() else "-C" + closeupVar.get() + " -cuthr " + str(float(closeupThresholdVar.get())/100)
-
-	runFaceStr = "-xf" if not runFaceVar.get() else "-" + faceVar.get()
-
-	runIQAStr = "-xi" if not runIQAVar.get() else "-IQA" + iqaVar.get() + " -brthr " + brisqueVar.get()
-
-	runBlurStr = "-xb" if not runBlurVar.get() else "-B" + blurVar.get() + " -blurthr " + blurThresholdVar.get()
-
-	runStatic = "python create_thumbnail.py %s -st 4\n" % (filePath)
 	try:
-		#subprocess.run([runStatic], check = True)
+		filePath = fileName.get()
+		if not exists(filePath):
+			print("File doesn't exist!")
+			raise Exception
+		filename = filePath.split('/')[-1]
+		name, ext = os.path.splitext(filename)
+
+		print("Number frames to extract: %s\nFace detection model: %s\nFilename: %s" % (numFramesExtractVar.get(), faceVar.get(), fileName.get()))
+
+		annotationStr = ""
+		if annotationMarkVar.get():
+			annotationStr = "-as " + annotationMarkVar.get()
+			if beforeAnnotationVar.get():
+				annotationStr += " -bac " + beforeAnnotationVar.get()
+			if afterAnnotationVar.get():
+				annotationStr += " -aac " + afterAnnotationVar.get()
+
+		csStr = "-css " + cutStartVar.get()
+		ceStr = "-ces " + cutEndVar.get()
+
+
+		downsamplingAlt = ["-nfe " + numFramesExtractVar.get(), "-fre " + downsamplingRatioVar.get(), "-fps " + fpsVar.get()]
+		downsamplingStr = downsamplingAlt[down_sampling_var.get()-1]
+
+		internalProcessingStr = ""
+		if internalProcessingVar.get():
+			internalProcessingStr = "-ds " + str(float(internalProcessingVar.get())/100)
+
+		outputImageStr = ""
+		if outputImageVar.get():
+			outputImageStr = "-dso " + str(float(outputImageVar.get())/100)
+
+		runLogoStr = "-xl" if not runLogoVar.get() else "-L" + logoVar.get() + " -logothr " + str(float(logoThresholdVar.get())/100)
+
+		runCloseup = "" if not runcloseupVar.get() else "-C" + closeupVar.get() + " -cuthr " + str(float(closeupThresholdVar.get())/100)
+
+		runFaceStr = "-xf" if not runFaceVar.get() else "-" + faceVar.get()
+
+		runIQAStr = "-xi" if not runIQAVar.get() else "-IQA" + iqaVar.get() + " -brthr " + brisqueVar.get()
+
+		blurStr = ""
+		if blurVar.get() == "SVD":
+			blurStr = "-BSVD -svdthr " + blurThresholdVar.get()
+		elif blurVar.get() == "Laplacian":
+			blurStr = "-BLaplacian -lapthr " + blurThresholdVar.get()
+
+		runBlurStr = "-xb" if not runBlurVar.get() else blurStr
+
+		runStatic = "python create_thumbnail.py %s -st 4\n" % (filePath)
 		if os.system(runStatic) != 0:
 			raise Exception('runStatic did not work')
 		runMLbased = 'python create_thumbnail.py %s %s %s %s %s %s %s %s %s %s %s %s\n' % (filePath, annotationStr, csStr, ceStr, downsamplingStr, internalProcessingStr, outputImageStr, runLogoStr, runCloseup, runFaceStr, runIQAStr, runBlurStr)
@@ -134,6 +140,16 @@ def display_close_up():
 	else:
 		closeupThresholdVar.config(state='disabled')
 		closeupDropDown.config(state='disabled')
+def change_blur_label(model):
+	if model == "SVD":
+		blur_threshold_label_text.set("SVD Blur threshold: value between [0,1]")
+		blurThresholdVar.delete(0, 'end')
+		blurThresholdVar.insert(10, "0.6")
+	elif model == "Laplacian":
+		blur_threshold_label_text.set("Laplacian blur threshold: any float")
+		blurThresholdVar.delete(0, 'end')
+		blurThresholdVar.insert(10, "1000")
+
 
 master = tk.Tk()
 master.winfo_toplevel().title("HOST-ATS Graphical User Interface")
@@ -147,6 +163,8 @@ iqaVar = StringVar(master)
 iqaVar.set("Ocampo")
 closeupVar = StringVar(master)
 closeupVar.set("Surma")
+blur_threshold_label_text = StringVar(master)
+blur_threshold_label_text.set("SVD Blur threshold: value between [0,1]")
 runIQAVar = BooleanVar(value=True)
 runLogoVar = BooleanVar(value=True)
 runFaceVar = BooleanVar(value=True)
@@ -203,7 +221,7 @@ tk.Label(image_quality_prediction, text="BRISQUE threshold value").grid(row=2, s
 blur_detection = LabelFrame(image_quality_analysis, text="3b. Blur Detection", padx=10, pady=10)
 blur_detection.grid(padx=10, pady=10, sticky=tk.W)
 tk.Label(blur_detection, text="Blur Detection Model").grid(row=1, sticky=tk.W)
-tk.Label(blur_detection, text="Blur score threshold").grid(row=2, sticky=tk.W)
+blur_threshold_label = tk.Label(blur_detection, textvariable=blur_threshold_label_text).grid(row=2, sticky=tk.W)
 
 file_processing = LabelFrame(master, padx=10, pady=10)
 file_processing.grid(row=1, column=3, columnspan=4, padx=10, pady=10, sticky=tk.N+tk.W+tk.E)
@@ -227,14 +245,14 @@ closeupThresholdVar = tk.Entry(close_up_shot_detection, width=5)
 
 faceDropDown = tk.OptionMenu(face_detection, faceVar, "haar", "dlib", "mtcnn", "dnn")
 logoDropDown = tk.OptionMenu(logo_detection, logoVar, "Eliteserien2019", "Soccernet")
-blurDropDown = tk.OptionMenu(blur_detection, blurVar, "SVD")
+blurDropDown = tk.OptionMenu(blur_detection, blurVar, "SVD", "Laplacian", command=change_blur_label)
 iqaDropDown = tk.OptionMenu(image_quality_prediction, iqaVar, "Ocampo")
 closeupDropDown = tk.OptionMenu(close_up_shot_detection, closeupVar, "Surma")
 fileName = tk.Entry(file_processing)
 runIQACheckbutton = tk.Checkbutton(image_quality_prediction, command=display_brisque_thr, text="Run Image Quality Prediction", variable=runIQAVar)
 brisqueVar = tk.Entry(image_quality_prediction, width=5)
 runBlurCheckbutton = tk.Checkbutton(blur_detection, command=display_blur_thr, text="Run Blur Detection", variable=runBlurVar)
-blurThresholdVar = tk.Entry(blur_detection, width=5)
+blurThresholdVar = tk.Entry(blur_detection, width=8)
 numFramesExtractVar.insert(10, "50")
 cutStartVar.insert(10, "0")
 cutEndVar.insert(10, "0")
@@ -272,7 +290,7 @@ runIQACheckbutton.grid(row=0, column=0)
 iqaDropDown.grid(row=1, column=1)
 brisqueVar.grid(row=2, column=1)
 
-runBlurCheckbutton.grid(row=0, column=0)
+runBlurCheckbutton.grid(row=0, column=0, sticky=tk.W)
 blurDropDown.grid(row=1,column=1)
 blurThresholdVar.grid(row=2,column=1)
 

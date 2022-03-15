@@ -19,7 +19,6 @@ haarXml = "./models/haarcascade_frontalface_default.xml"
 modelFile =  "./models/res10_300x300_ssd_iter_140000.caffemodel"
 configFile = "./models/deploy.prototxt.txt"
 thumbnail_output = "./thumbnail_output/"
-excluded_images = "./excluded_images/"
 eliteserien_logo_model = "./models/logo_eliteserien.h5"
 soccernet_logo_model = "./models/logo_soccernet.h5"
 surma_closeup_model = "./models/close_up_model.h5"
@@ -30,6 +29,7 @@ mtcnnStr = "mtcnn"
 dnnStr = "dnn"
 surmaStr = "surma"
 svdStr = "svd"
+laplacianStr = "laplacian"
 ocampoStr = "ocampo"
 eliteserienStr = "eliteserien"
 soccernetStr = "soccernet"
@@ -61,7 +61,8 @@ def main():
     iqa_model_name = ocampoStr
     brisque_threshold = 35
     blur_model_name = svdStr
-    blur_threshold = 0.65
+    svd_threshold = 0.65
+    laplacian_threshold = 1000
 
     parser = argparse.ArgumentParser(description="Thumbnail generator")
     parser.add_argument("destination", nargs=1, help="Destination of the input to be processed. Can be file or folder.")
@@ -101,7 +102,8 @@ def main():
     parser.add_argument("-cuthr", "--closeUpThreshold", type=restricted_float, default=[close_up_threshold], nargs=1, help="The threshold value for the close-up detection model. The value must be between 0 and 1. The default is: " + str(close_up_threshold))
     parser.add_argument("-brthr", "--brisqueThreshold", type=float, default=[brisque_threshold], nargs=1, help="The threshold value for the image quality predictor model. The default is: " + str(brisque_threshold))
     parser.add_argument("-logothr", "--logoThreshold", type=restricted_float, default=[logo_threshold], nargs=1, help="The threshold value for the logo detection model. The value must be between 0 and 1. The default value is: " + str(logo_threshold))
-    parser.add_argument("-blurthr", "--blurThreshold", type=restricted_float, default=[blur_threshold], nargs=1, help="The threshold value for the blur detection model. The default value is: " + str(blur_threshold))
+    parser.add_argument("-svdthr", "--svdThreshold", type=restricted_float, default=[svd_threshold], nargs=1, help="The threshold value for the SVD blur detection. The default value is: " + str(svd_threshold))
+    parser.add_argument("-lapthr", "--laplacianThreshold", type=float, default=[laplacian_threshold], nargs=1, help="The threshold value for the Laplacian blur detection. The default value is: " + str(laplacian_threshold))
     parser.add_argument("-css", "--cutStartSeconds", type=positive_int, default=[cutStartSeconds], nargs=1, help="The number of seconds to cut from start of the video. These seconds of video will not be processed in the thumbnail selection. The default value is: " + str(cutStartSeconds))
     parser.add_argument("-ces", "--cutEndSeconds", type=positive_int, default=[cutEndSeconds], nargs=1, help="The number of seconds to cut from the end of the video. These seconds of video will not be processed in the thumbnail selection. The default value is: " + str(cutEndSeconds))
     numFrameExtractGroup = parser.add_mutually_exclusive_group(required = False)
@@ -188,8 +190,9 @@ def main():
     if args.BSVD:
         blur_model_name = svdStr
     elif args.BLaplacian:
-        blur_model_name = svdStr
-    blur_threshold = args.blurThreshold[0]
+        blur_model_name = laplacianStr
+    svd_threshold = args.svdThreshold[0]
+    laplacian_threshold = args.laplacianThreshold[0]
 
     processFolder = False
     processFile = False
@@ -229,17 +232,17 @@ def main():
 
     if processFile:
         name, ext = os.path.splitext(destination)
-        create_thumbnail(name + ext, downscaleOutput, downscaleOnProcessing, close_up_model, logo_detection_model, faceDetModel, runFaceDetection, runBlur, blur_model_name, blur_threshold, runIQA, iqa_model_name, runLogoDetection, runCloseUpDetection, close_up_threshold, brisque_threshold, logo_threshold, cutStartSeconds, cutEndSeconds, totalFramesToExtract, fpsExtract, framerateExtract, annotationSecond, beforeAnnotationSecondsCut, afterAnnotationSecondsCut)
+        create_thumbnail(name + ext, downscaleOutput, downscaleOnProcessing, close_up_model, logo_detection_model, faceDetModel, runFaceDetection, runBlur, blur_model_name, svd_threshold, laplacian_threshold, runIQA, iqa_model_name, runLogoDetection, runCloseUpDetection, close_up_threshold, brisque_threshold, logo_threshold, cutStartSeconds, cutEndSeconds, totalFramesToExtract, fpsExtract, framerateExtract, annotationSecond, beforeAnnotationSecondsCut, afterAnnotationSecondsCut)
     elif processFolder:
         for f in os.listdir(destination):
             name, ext = os.path.splitext(f)
             if ext == ".ts" or ext == ".mp4":
-                create_thumbnail(destination + name + ext,downscaleOutput , downscaleOnProcessing, close_up_model, logo_detection_model, faceDetModel, runFaceDetection, runBlur, blur_model_name, blur_threshold, runIQA, iqa_model_name, runLogoDetection, runCloseUpDetection, close_up_threshold, brisque_threshold, logo_threshold, cutStartSeconds, cutEndSeconds, totalFramesToExtract, fpsExtract, framerateExtract, annotationSecond, beforeAnnotationSecondsCut, afterAnnotationSecondsCut)
+                create_thumbnail(destination + name + ext, downscaleOutput , downscaleOnProcessing, close_up_model, logo_detection_model, faceDetModel, runFaceDetection, runBlur, blur_model_name, svd_threshold, laplacian_threshold, runIQA, iqa_model_name, runLogoDetection, runCloseUpDetection, close_up_threshold, brisque_threshold, logo_threshold, cutStartSeconds, cutEndSeconds, totalFramesToExtract, fpsExtract, framerateExtract, annotationSecond, beforeAnnotationSecondsCut, afterAnnotationSecondsCut)
 
 
 
 
-def create_thumbnail(video_path, downscaleOutput, downscaleOnProcessing, close_up_model, logo_detection_model, faceDetModel, runFaceDetection, runBlur, blur_model_name, blur_threshold, runIQA, iqa_model_name, runLogoDetection, runCloseUpDetection, close_up_threshold, brisque_threshold, logo_threshold, cutStartSeconds, cutEndSeconds, totalFramesToExtract, fpsExtract, framerateExtract, annotationSecond, beforeAnnotationSecondsCut, afterAnnotationSecondsCut):
+def create_thumbnail(video_path, downscaleOutput, downscaleOnProcessing, close_up_model, logo_detection_model, faceDetModel, runFaceDetection, runBlur, blur_model_name, svd_threshold, laplacian_threshold, runIQA, iqa_model_name, runLogoDetection, runCloseUpDetection, close_up_threshold, brisque_threshold, logo_threshold, cutStartSeconds, cutEndSeconds, totalFramesToExtract, fpsExtract, framerateExtract, annotationSecond, beforeAnnotationSecondsCut, afterAnnotationSecondsCut):
     video_filename = video_path.split("/")[-1]
     frames_folder_outer = os.path.dirname(os.path.abspath(__file__)) + "/extractedFrames/"
     frames_folder = frames_folder_outer + video_filename.split(".")[0] + "_frames"
@@ -314,7 +317,6 @@ def create_thumbnail(video_path, downscaleOutput, downscaleOnProcessing, close_u
 
     priority_images = groupFrames(frames_folder, close_up_model, logo_detection_model, faceDetModel, runFaceDetection, runLogoDetection, runCloseUpDetection, close_up_threshold, logo_threshold)
     finalThumbnail = ""
-    excluded = []
 
     for priority in priority_images:
         if finalThumbnail != "":
@@ -325,9 +327,15 @@ def create_thumbnail(video_path, downscaleOutput, downscaleOnProcessing, close_u
         if runBlur:
             if blur_model_name == svdStr:
                 for image in priority:
-                    blur_score = get_blur_degree(image)
-                    if blur_score < blur_threshold:
+                    blur_score = estimate_blur_svd(image)
+                    if blur_score < svd_threshold:
                         blur_filtered.append(image)
+            if blur_model_name == laplacianStr:
+                for image in priority:
+                    blur_score = estimate_blur_laplacian(image)
+                    if blur_score > laplacian_threshold:
+                        blur_filtered.append(image)
+
         else:
             for image in priority:
                 blur_filtered.append(image)
@@ -497,12 +505,19 @@ def predictBrisque(image_path):
 
     return brisqueScore
 
-def get_blur_degree(image_file, sv_num=10):
+def estimate_blur_svd(image_file, sv_num=10):
     img = cv2.imread(image_file,cv2.IMREAD_GRAYSCALE)
     u, s, v = np.linalg.svd(img)
     top_sv = np.sum(s[0:sv_num])
     total_sv = np.sum(s)
     return top_sv/total_sv
+
+
+def estimate_blur_laplacian(image_file):
+    img = cv2.imread(image_file,cv2.COLOR_BGR2GRAY)
+    blur_map = cv2.Laplacian(img, cv2.CV_64F)
+    score = np.var(blur_map)
+    return score
 
 def detect_faces(image, faceDetModel):
     biggestFace = 0
