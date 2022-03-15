@@ -11,10 +11,6 @@ import imquality.brisque as brisque
 import dlib
 from mtcnn.mtcnn import MTCNN
 
-folder_path = "/global/D1/projects/soccer_clipping/events-Allsvenskan2019-minus15-pluss25/"
-#video="/global/D1/projects/soccer_clipping/events-Allsvenskan2019-minus15-pluss25/akwaxywqi4qo3.ts"
-#folder_path = "/global/D1/projects/soccer_clipping/events-Eliteserien2019-minus15-pluss25/"
-
 haarXml = "./models/haarcascade_frontalface_default.xml"
 modelFile =  "./models/res10_300x300_ssd_iter_140000.caffemodel"
 configFile = "./models/deploy.prototxt.txt"
