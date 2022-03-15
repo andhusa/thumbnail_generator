@@ -15,15 +15,14 @@ folder_path = "/global/D1/projects/soccer_clipping/events-Allsvenskan2019-minus1
 #video="/global/D1/projects/soccer_clipping/events-Allsvenskan2019-minus15-pluss25/akwaxywqi4qo3.ts"
 #folder_path = "/global/D1/projects/soccer_clipping/events-Eliteserien2019-minus15-pluss25/"
 
-current_path = os.path.dirname(os.path.abspath(__file__))
-
-haarXml = current_path + '/models/haarcascade_frontalface_default.xml'
-modelFile = current_path + "/models/res10_300x300_ssd_iter_140000.caffemodel"
-configFile = current_path + "/models/deploy.prototxt.txt"
-thumbnail_output = current_path + "/thumbnail_output/"
-excluded_images = current_path + "/excluded_images/"
-surmaLogoModel = current_path + '/models/logo_detection.h5'
-surmaCloseupModel = current_path + '/models/close_up_model.h5'
+haarXml = "./models/haarcascade_frontalface_default.xml"
+modelFile =  "./models/res10_300x300_ssd_iter_140000.caffemodel"
+configFile = "./models/deploy.prototxt.txt"
+thumbnail_output = "./thumbnail_output/"
+excluded_images = "./excluded_images/"
+eliteserien_logo_model = "./models/logo_detection.h5"
+soccerner_logo_model = "./models/logo_detection.h5"
+surma_closeup_model = "./models/close_up_model.h5"
 
 haarStr = "haar"
 dlibStr = "dlib"
@@ -32,6 +31,8 @@ dnnStr = "dnn"
 surmaStr = "surma"
 svdStr = "svd"
 ocampoStr = "ocampo"
+eliteserienStr = "eliteserien"
+soccernetStr = "soccernet"
 
 #The probability score the image classifying model gives, is depending on which class it is basing the score on.
 #It could be switched
@@ -52,7 +53,7 @@ def main():
     beforeAnnotationSecondsCut = None
     afterAnnotationSecondsCut = None
     staticThumbnailSec = None
-    logo_model_name = surmaStr
+    logo_model_name = eliteserienStr
     logo_detection_model = ""
     logo_threshold = 0.1
     close_up_model_name = surmaStr
@@ -67,7 +68,8 @@ def main():
 
     #Logo detection models
     logoGroup = parser.add_mutually_exclusive_group(required=False)
-    logoGroup.add_argument("-LSurma", action='store_true', help="Surma model used for logo detection.")
+    logoGroup.add_argument("-LEliteserien2019", action='store_true', help="Surma model used for logo detection, trained on Eliteserien 2019.")
+    logoGroup.add_argument("-LSoccernet", action='store_true', help="Surma model used for logo detection, trained on Soccernet.")
     logoGroup.add_argument("-xl", "--xLogoDetection", default=True, action="store_false", help="Don't run logo detection.")
 
     #Close-up detection models
@@ -145,8 +147,10 @@ def main():
     runLogoDetection = args.xLogoDetection
     if not runLogoDetection:
         logo_model_name = ""
-    if args.LSurma:
-        logo_model_name = surmaStr
+    if args.LEliteserien2019:
+        logo_model_name = eliteserienStr
+    elif args.LSoccernet:
+        logo_model_name = soccernetStr
     logo_threshold = args.logoThreshold[0]
 
     #Close-up detection
@@ -216,10 +220,12 @@ def main():
         return
 
     if close_up_model_name == surmaStr:
-        close_up_model = keras.models.load_model(surmaCloseupModel)
+        close_up_model = keras.models.load_model(surma_closeup_model)
 
-    if logo_model_name == surmaStr:
-        logo_detection_model = keras.models.load_model(surmaLogoModel)
+    if logo_model_name == eliteserienStr:
+        logo_detection_model = keras.models.load_model(eliteserien_logo_model)
+    elif logo_model_name == soccernetStr:
+        logo_detection_model = keras.models.load_model(eliteserien_logo_model)
 
     if processFile:
         name, ext = os.path.splitext(destination)
