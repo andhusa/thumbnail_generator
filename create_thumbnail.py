@@ -320,7 +320,6 @@ def create_thumbnail(video_path, downscaleOutput, downscaleOnProcessing, close_u
             if blur_model_name == svdStr:
                 for image in priority:
                     blur_score = get_blur_degree(image)
-                    print(image + " blur: " + str(blur_score))
                     if blur_score < blur_threshold:
                         blur_filtered.append(image)
         else:
@@ -328,15 +327,11 @@ def create_thumbnail(video_path, downscaleOutput, downscaleOnProcessing, close_u
                 blur_filtered.append(image)
 
 
-
-        print(blur_filtered)
-
         if runIQA:
             if iqa_model_name == ocampoStr:
                 bestScore = 0
                 for image in blur_filtered:
                     score = predictBrisque(image)
-                    print(image + " brisque: " + str(score))
                     if finalThumbnail == "":
                         bestScore = score
                         finalThumbnail = image
@@ -362,7 +357,6 @@ def create_thumbnail(video_path, downscaleOutput, downscaleOnProcessing, close_u
         newName = video_filename.split(".")[0] + "_thumbnail.jpg"
         imageName = finalThumbnail.split("/")[-1].split(".")[0]
         frameNum = int(imageName.replace("frame", ""))
-        #cam = cv2.VideoCapture(video_path)
 
         cam.set(1, frameNum)
         ret, frame = cam.read()
@@ -381,8 +375,7 @@ def create_thumbnail(video_path, downscaleOutput, downscaleOnProcessing, close_u
         #secInVid = (frameNum / totalFrames) * duration
 
         try:
-            pass
-            #shutil.rmtree(frames_folder_outer)
+            shutil.rmtree(frames_folder_outer)
 
         except OSError as e:
             print("Error: %s - %s." % (e.filename, e.strerror))
