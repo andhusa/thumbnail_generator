@@ -61,23 +61,28 @@ def generate():
 		outputname = './thumbnail_output/' + name + '_thumbnail.jpg'
 		staticOutputname = './thumbnail_output/' + name + '_static_thumbnail.jpg'
 
-		imgML = Image.open(outputname)
-
-		imgML = imgML.resize((width,height), Image.ANTIALIAS)
-		photoImgML = ImageTk.PhotoImage(imgML)
-		master.imgML = photoImgML
-		canvas2.create_image(20,20, anchor=NW, image=photoImgML)
 		imgS = Image.open(staticOutputname)
 		imgS = imgS.resize((width,height), Image.ANTIALIAS)
 		photoImgS = ImageTk.PhotoImage(imgS)
 		master.imgS = photoImgS
 		canvas1.create_image(20,20, anchor=NW, image=photoImgS)
+		imgML = Image.open(outputname)
+		imgML = imgML.resize((width,height), Image.ANTIALIAS)
+		photoImgML = ImageTk.PhotoImage(imgML)
+		master.imgML = photoImgML
+		canvas2.create_image(20,20, anchor=NW, image=photoImgML)
+		generate_response_text.set("")
 	except:
+		generate_response_text.set("Creating thumbnail did not work with the given arguments!")
 		print("Creating thumbnail did not work with the given arguments")
 
 def open_file():
 	video_file = askopenfilename()
 	video_file_text.set(video_file)
+	master.imgS = ""
+	master.imgML = ""
+	if len(video_file) == 0:
+		video_file_text.set("No file selected")
 	fileName.delete(0, 'end')
 	fileName.insert(0, video_file)
 def display_face_det_models():
@@ -135,7 +140,7 @@ master.winfo_toplevel().title("HOST-ATS Graphical User Interface")
 faceVar = StringVar(master)
 faceVar.set("dlib") # default value
 logoVar = StringVar(master)
-logoVar.set('Surma')
+logoVar.set("Eliteserien2019")
 blurVar = StringVar(master)
 blurVar.set("SVD")
 iqaVar = StringVar(master)
@@ -147,7 +152,8 @@ runLogoVar = BooleanVar(value=True)
 runFaceVar = BooleanVar(value=True)
 runBlurVar = BooleanVar(value=True)
 runcloseupVar = BooleanVar(value=True)
-video_file_text = StringVar(value="No file selected					")
+video_file_text = StringVar(value="No file selected")
+generate_response_text = StringVar(value="")
 generate_button_state = StringVar(value='disabled')
 pre_processing = LabelFrame(master, text="Step 1. Pre-processing", font=('Arial', 20), padx=10, pady=10)
 pre_processing.grid( padx=10, pady=10)
@@ -178,7 +184,7 @@ runLogoCheckbutton = tk.Checkbutton(logo_detection, command=display_logo_det_mod
 tk.Label(logo_detection, text="Logo Detection Model").grid(row=1, sticky=tk.W)
 tk.Label(logo_detection, text="Logo detection threshold (%)").grid(row=2, sticky=tk.W)
 close_up_shot_detection = LabelFrame(content_analysis, text="2b. Close-up Shot Detection", padx=10, pady=10)
-close_up_shot_detection.grid(padx=10, pady=10)
+close_up_shot_detection.grid(padx=10, pady=10, sticky=tk.W)
 runCloseCheckbutton = tk.Checkbutton(close_up_shot_detection, command=display_close_up,text="Run Close-up Shot Detection", variable=runcloseupVar)
 tk.Label(close_up_shot_detection, text="Close-up shot detection model").grid(row=1, sticky=tk.W)
 tk.Label(close_up_shot_detection, text="Close-up detection threshold (%)").grid(row=2, sticky=tk.W)
@@ -203,6 +209,7 @@ file_processing = LabelFrame(master, padx=10, pady=10)
 file_processing.grid(row=1, column=3, columnspan=4, padx=10, pady=10, sticky=tk.N+tk.W+tk.E)
 video_file_text_label = tk.Label(file_processing, textvariable=video_file_text, font=('Arial', 8)).grid(sticky=tk.W, column=1)
 generate_button = tk.Button(file_processing, text='Generate', command=generate).grid(sticky=tk.W)
+generate_response = tk.Label(file_processing, textvariable=generate_response_text, fg="#FF0000",font=('Arial', 8)).grid(sticky=tk.W, column=1, row=1)
 
 annotationMarkVar = tk.Entry(trimming, width=5)
 beforeAnnotationVar = tk.Entry(trimming, width=5)
@@ -219,7 +226,7 @@ logoThresholdVar = tk.Entry(logo_detection, width=5)
 closeupThresholdVar = tk.Entry(close_up_shot_detection, width=5)
 
 faceDropDown = tk.OptionMenu(face_detection, faceVar, "haar", "dlib", "mtcnn", "dnn")
-logoDropDown = tk.OptionMenu(logo_detection, logoVar, "Surma", "Ocampo")
+logoDropDown = tk.OptionMenu(logo_detection, logoVar, "Eliteserien2019", "Soccernet")
 blurDropDown = tk.OptionMenu(blur_detection, blurVar, "SVD")
 iqaDropDown = tk.OptionMenu(image_quality_prediction, iqaVar, "Ocampo")
 closeupDropDown = tk.OptionMenu(close_up_shot_detection, closeupVar, "Surma")

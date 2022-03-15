@@ -20,8 +20,8 @@ modelFile =  "./models/res10_300x300_ssd_iter_140000.caffemodel"
 configFile = "./models/deploy.prototxt.txt"
 thumbnail_output = "./thumbnail_output/"
 excluded_images = "./excluded_images/"
-eliteserien_logo_model = "./models/logo_detection.h5"
-soccerner_logo_model = "./models/logo_detection.h5"
+eliteserien_logo_model = "./models/logo_eliteserien.h5"
+soccernet_logo_model = "./models/logo_soccernet.h5"
 surma_closeup_model = "./models/close_up_model.h5"
 
 haarStr = "haar"
@@ -225,7 +225,7 @@ def main():
     if logo_model_name == eliteserienStr:
         logo_detection_model = keras.models.load_model(eliteserien_logo_model)
     elif logo_model_name == soccernetStr:
-        logo_detection_model = keras.models.load_model(eliteserien_logo_model)
+        logo_detection_model = keras.models.load_model(soccernet_logo_model)
 
     if processFile:
         name, ext = os.path.splitext(destination)
