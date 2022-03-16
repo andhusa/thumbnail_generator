@@ -384,7 +384,7 @@ def create_thumbnail(video_path, downscaleOutput, downscaleOnProcessing, close_u
 
         #secInVid = (frameNum / totalFrames) * duration
 
-        try:
+        try: 
             shutil.rmtree(frames_folder_outer)
 
         except OSError as e:
