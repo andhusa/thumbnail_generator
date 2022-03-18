@@ -3,3 +3,4 @@ image-quality
 dlib
 mtcnn
 numpy
+tensorflow
