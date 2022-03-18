@@ -14,4 +14,4 @@ create_thumbnail.py [-h] [-LEliteserien2019 | -LSoccernet | -xl] [-CSurma | -xc]
                            [-nfe NUMBEROFFRAMESTOEXTRACT | -fre FRAMERATETOEXTRACT | -fpse FPSEXTRACT] [-ds DOWNSCALEPROCESSINGIMAGES] [-dso DOWNSCALEOUTPUTIMAGE] [-as ANNOTATIONSECOND] [-bac BEFOREANNOTATIONSECONDSCUT]
                            [-aac AFTERANNOTATIONSECONDSCUT] [-st STATICTHUMBNAILSEC]
                            destination
-                           ```
+                           
