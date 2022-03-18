@@ -73,3 +73,5 @@ options:
                         Seconds after the annotation to cut the frame extraction.
   -st STATICTHUMBNAILSEC, --staticThumbnailSec STATICTHUMBNAILSEC
                         To generate a static thumbnail from the video, this flag is used. The second the frame should be clipped from should follow as an argument. Running this flag ignores all the other flags.
+
+```python create_thumbnail <path_to_video_file>```
