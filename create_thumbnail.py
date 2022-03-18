@@ -29,6 +29,7 @@ laplacianStr = "laplacian"
 ocampoStr = "ocampo"
 eliteserienStr = "eliteserien"
 soccernetStr = "soccernet"
+filenameAdditional = "thumbnail"
 
 #The probability score the image classifying model gives, is depending on which class it is basing the score on.
 #It could be switched
@@ -364,7 +365,7 @@ def create_thumbnail(video_path, downscaleOutput, downscaleOnProcessing, close_u
                 break
 
     if finalThumbnail != "":
-        newName = video_filename.split(".")[0] + "_thumbnail.jpg"
+        newName = video_filename.split(".")[0] + "_" + filenameAdditional +  ".jpg"
         imageName = finalThumbnail.split("/")[-1].split(".")[0]
         frameNum = int(imageName.replace("frame", ""))
 
