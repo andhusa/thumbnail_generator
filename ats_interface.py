@@ -4,7 +4,6 @@ import tkinter as tk
 from tkinter.filedialog import askopenfilename
 from PIL import ImageTk, Image
 from os.path import exists
-import subprocess
 
 def generate():
 
