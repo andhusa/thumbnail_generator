@@ -387,7 +387,6 @@ def create_thumbnail(video_path, downscaleOutput, downscaleOnProcessing, close_u
 
         try: 
             shutil.rmtree(frames_folder_outer)
-
         except OSError as e:
             print("Error: %s - %s." % (e.filename, e.strerror))
         return
@@ -511,9 +510,11 @@ def estimate_blur_svd(image_file, sv_num=10):
 
 
 def estimate_blur_laplacian(image_file):
+    #img = cv2.imread(
     img = cv2.imread(image_file,cv2.COLOR_BGR2GRAY)
     blur_map = cv2.Laplacian(img, cv2.CV_64F)
     score = np.var(blur_map)
+    print(score)
     return score
 
 def detect_faces(image, faceDetModel):
