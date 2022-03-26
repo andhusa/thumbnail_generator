@@ -77,4 +77,5 @@ options:
   -st STATICTHUMBNAILSEC, --staticThumbnailSec STATICTHUMBNAILSEC
                         To generate a static thumbnail from the video, this flag is used. The second the frame should be clipped from should follow as an argument. Running this flag ignores all the other flags.
 ```
-
+# Output
+The output images after running the ```create_thumbnail.py``` will end up in a folder with name ```thumbnail_output/```.
