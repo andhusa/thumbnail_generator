@@ -3,10 +3,14 @@
 You need Python version 3 before you start the installation.
 The environment needed, is possible to install by running the command ```pip install -r requirements.txt```.
 # Get started
-The thumbnail_generator is possible to run in terminal by running ```python create_thumbnail.py``` and giving its belonging parameters.
+The thumbnail generator is possible to run in terminal by running ```python create_thumbnail.py``` and giving its belonging parameters.
 Running ```python create_thumbnail.py -h``` gives detailed information on which parameters it is possible to give.
 
 To run a GUI instead of running the ```create_thumbnail.py``` file in terminal with parameters, it is possible to write the command ```python ats_interface.py``` and a GUI window will appear.
+
+It is possible to receive a thumbnail when running the command ```python create_thumbnail.py <path_to_video_file>``` in terminal. This will run with the default parameters, but it is also possible to modify the parameters with the flags that are available.
+
+The flags that are available for the ```create_thumbnail.py``` file is shown when running the command ```python create_thumbnail.py -h``` and the following will display in terminal:
 
 ```
 create_thumbnail.py [-h] [-LEliteserien2019 | -LSoccernet | -xl] [-CSurma | -xc] [-IQAOcampo | -xi] [-BSVD | -BLaplacian | -xb] [-dlib | -haar | -mtcnn | -dnn | -xf] [-cuthr CLOSEUPTHRESHOLD]
@@ -75,4 +79,3 @@ options:
                         To generate a static thumbnail from the video, this flag is used. The second the frame should be clipped from should follow as an argument. Running this flag ignores all the other flags.
 ```
 
-```python create_thumbnail <path_to_video_file>```
