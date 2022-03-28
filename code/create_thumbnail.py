@@ -245,8 +245,11 @@ def create_thumbnail(video_path, downscaleOutput, downscaleOnProcessing, close_u
     video_filename = video_path.split("/")[-1]
     #frames_folder_outer = os.path.dirname(os.path.abspath(__file__)) + "/extractedFrames/"
     frames_folder = frames_folder_outer + "/frames/"
-    os.mkdir(frames_folder_outer)
-    os.mkdir(frames_folder)
+    if not os.path.exists(frames_folder_outer):
+        os.mkdir(frames_folder_outer)
+    if not os.path.exists(frames_folder):
+        os.mkdir(frames_folder)
+
     #frames_folder = frames_folder_outer + "/"
 
     # Read the video from specified path
@@ -317,15 +320,10 @@ def create_thumbnail(video_path, downscaleOutput, downscaleOnProcessing, close_u
             height = int(frame.shape[0] * downscaleOnProcessing)
             dsize = (width, height)
             img = cv2.resize(frame, dsize)
-            print(name)
-            #print(img)
-            print("imwrite")
-            writeStatus = cv2.imwrite(name, img)
-            print(writeStatus)
+            cv2.imwrite(name, img)
             numFramesExtracted += 1
 
         currentframe += 1
-    print(os.listdir("../data/"))
 
     priority_images = groupFrames(frames_folder, close_up_model, logo_detection_model, faceDetModel, runFaceDetection, runLogoDetection, runCloseUpDetection, close_up_threshold, logo_threshold)
     finalThumbnail = ""
@@ -357,7 +355,6 @@ def create_thumbnail(video_path, downscaleOutput, downscaleOnProcessing, close_u
             if iqa_model_name == ocampoStr:
                 bestScore = 0
                 for image in blur_filtered:
-                    print(image)
                     score = predictBrisque(image)
                     if finalThumbnail == "":
                         bestScore = score
@@ -394,7 +391,7 @@ def create_thumbnail(video_path, downscaleOutput, downscaleOnProcessing, close_u
             frame = cv2.resize(frame, dsize)
 
         cv2.imwrite(thumbnail_output + newName, frame)
-
+        print("Thumbnail created. Filename: " + newName)
         # Release all space and windows once done
         cam.release()
         cv2.destroyAllWindows()
@@ -405,7 +402,7 @@ def create_thumbnail(video_path, downscaleOutput, downscaleOnProcessing, close_u
             shutil.rmtree(frames_folder)
         except OSError as e:
             print("Error: %s - %s." % (e.filename, e.strerror))
-        return
+    print("Done")
     return
 
 def groupFrames(frames_folder, close_up_model, logo_detection_model, faceDetModel, runFaceDetection, runLogoDetection, runCloseUpDetection, close_up_threshold, logo_threshold):
@@ -438,7 +435,6 @@ def groupFrames(frames_folder, close_up_model, logo_detection_model, faceDetMode
         probabilities = close_up_model.predict_generator(test_generator, TEST_SIZE)
 
         for index, probability in enumerate(probabilities):
-            print(test_generator.filenames[index].split("/")[-1])
             #The probability score is inverted:
             if close_up_model_inverted:
                 probability = 1 - probability
@@ -513,12 +509,7 @@ def get_static(video_path, secondExtract, downscaleOutput, outputFolder):
 
 
 def predictBrisque(image_path):
-    print("isfile")
-    print(os.path.isfile(image_path))
-    print("imread")
     img = cv2.imread(image_path)
-    print(img)
-    print(img.shape)
     brisqueScore = brisque.score(img)
 
     return brisqueScore
@@ -536,7 +527,6 @@ def estimate_blur_laplacian(image_file):
     img = cv2.imread(image_file,cv2.COLOR_BGR2GRAY)
     blur_map = cv2.Laplacian(img, cv2.CV_64F)
     score = np.var(blur_map)
-    print(score)
     return score
 
 def detect_faces(image, faceDetModel):
@@ -544,7 +534,6 @@ def detect_faces(image, faceDetModel):
     if faceDetModel == dlibStr:
         detector = dlib.get_frontal_face_detector()
         img = cv2.imread(image)
-        print(image)
         gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
         faces = detector(gray, 1)
         for result in faces:
