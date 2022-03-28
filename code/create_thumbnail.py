@@ -31,7 +31,7 @@ laplacianStr = "laplacian"
 ocampoStr = "ocampo"
 eliteserienStr = "eliteserien"
 soccernetStr = "soccernet"
-filenameAdditional = "thumbnail"
+filename_additional = "thumbnail"
 
 #The probability score the image classifying model gives, is depending on which class it is basing the score on.
 #It could be switched
@@ -62,6 +62,8 @@ def main():
     blur_model_name = svdStr
     svd_threshold = 0.65
     laplacian_threshold = 1000
+    filename_output = ""
+
 
     parser = argparse.ArgumentParser(description="Thumbnail generator")
     parser.add_argument("destination", nargs=1, help="Destination of the input to be processed. Can be file or folder.")
@@ -115,11 +117,12 @@ def main():
     parser.add_argument("-bac", "--beforeAnnotationSecondsCut", type=positive_int, default=[beforeAnnotationSecondsCut], nargs=1, help="Seconds before the annotation to cut the frame extraction.")
     parser.add_argument("-aac", "--afterAnnotationSecondsCut", type=positive_int, default=[afterAnnotationSecondsCut], nargs=1, help="Seconds after the annotation to cut the frame extraction.")
     parser.add_argument("-st", "--staticThumbnailSec", type=positive_int, default=[staticThumbnailSec], nargs=1, help="To generate a static thumbnail from the video, this flag is used. The second the frame should be clipped from should follow as an argument. Running this flag ignores all the other flags.")
-
+    parser.add_argument("-fn", "--outputFilename", type=str, default=[filename_output], nargs=1, help="Filename for the output thumbnail instead of default.")
 
     args = parser.parse_args()
     destination = args.destination[0]
     staticThumbnailSec = args.staticThumbnailSec[0]
+    filename_output = args.outputFilename[0]
 
     #Trimming
     annotationSecond = args.annotationSecond[0]
@@ -231,17 +234,17 @@ def main():
 
     if processFile:
         name, ext = os.path.splitext(destination)
-        create_thumbnail(name + ext, downscaleOutput, downscaleOnProcessing, close_up_model, logo_detection_model, faceDetModel, runFaceDetection, runBlur, blur_model_name, svd_threshold, laplacian_threshold, runIQA, iqa_model_name, runLogoDetection, runCloseUpDetection, close_up_threshold, brisque_threshold, logo_threshold, cutStartSeconds, cutEndSeconds, totalFramesToExtract, fpsExtract, framerateExtract, annotationSecond, beforeAnnotationSecondsCut, afterAnnotationSecondsCut)
+        create_thumbnail(name + ext, downscaleOutput, downscaleOnProcessing, close_up_model, logo_detection_model, faceDetModel, runFaceDetection, runBlur, blur_model_name, svd_threshold, laplacian_threshold, runIQA, iqa_model_name, runLogoDetection, runCloseUpDetection, close_up_threshold, brisque_threshold, logo_threshold, cutStartSeconds, cutEndSeconds, totalFramesToExtract, fpsExtract, framerateExtract, annotationSecond, beforeAnnotationSecondsCut, afterAnnotationSecondsCut, filename_output)
     elif processFolder:
         for f in os.listdir(destination):
             name, ext = os.path.splitext(f)
             if ext == ".ts" or ext == ".mp4" or ext == ".mkv":
-                create_thumbnail(destination + name + ext, downscaleOutput , downscaleOnProcessing, close_up_model, logo_detection_model, faceDetModel, runFaceDetection, runBlur, blur_model_name, svd_threshold, laplacian_threshold, runIQA, iqa_model_name, runLogoDetection, runCloseUpDetection, close_up_threshold, brisque_threshold, logo_threshold, cutStartSeconds, cutEndSeconds, totalFramesToExtract, fpsExtract, framerateExtract, annotationSecond, beforeAnnotationSecondsCut, afterAnnotationSecondsCut)
+                create_thumbnail(destination + name + ext, downscaleOutput , downscaleOnProcessing, close_up_model, logo_detection_model, faceDetModel, runFaceDetection, runBlur, blur_model_name, svd_threshold, laplacian_threshold, runIQA, iqa_model_name, runLogoDetection, runCloseUpDetection, close_up_threshold, brisque_threshold, logo_threshold, cutStartSeconds, cutEndSeconds, totalFramesToExtract, fpsExtract, framerateExtract, annotationSecond, beforeAnnotationSecondsCut, afterAnnotationSecondsCut, filename_output)
 
 
 
 
-def create_thumbnail(video_path, downscaleOutput, downscaleOnProcessing, close_up_model, logo_detection_model, faceDetModel, runFaceDetection, runBlur, blur_model_name, svd_threshold, laplacian_threshold, runIQA, iqa_model_name, runLogoDetection, runCloseUpDetection, close_up_threshold, brisque_threshold, logo_threshold, cutStartSeconds, cutEndSeconds, totalFramesToExtract, fpsExtract, framerateExtract, annotationSecond, beforeAnnotationSecondsCut, afterAnnotationSecondsCut):
+def create_thumbnail(video_path, downscaleOutput, downscaleOnProcessing, close_up_model, logo_detection_model, faceDetModel, runFaceDetection, runBlur, blur_model_name, svd_threshold, laplacian_threshold, runIQA, iqa_model_name, runLogoDetection, runCloseUpDetection, close_up_threshold, brisque_threshold, logo_threshold, cutStartSeconds, cutEndSeconds, totalFramesToExtract, fpsExtract, framerateExtract, annotationSecond, beforeAnnotationSecondsCut, afterAnnotationSecondsCut, filename_output):
     video_filename = video_path.split("/")[-1]
     #frames_folder_outer = os.path.dirname(os.path.abspath(__file__)) + "/extractedFrames/"
     frames_folder = frames_folder_outer + "/frames/"
@@ -378,7 +381,15 @@ def create_thumbnail(video_path, downscaleOutput, downscaleOnProcessing, close_u
                 break
 
     if finalThumbnail != "":
-        newName = video_filename.split(".")[0] + "_" + filenameAdditional +  ".jpg"
+        newName = ""
+        if filename_output == "":
+            newName = video_filename.split(".")[0] + "_" + filenameAdditional +  ".jpg"
+        else:
+            newName = filename_output
+            extension_added = len(newName.split(".")) == 2
+            if not extension_added:
+                newName = newName + ".jpg"
+            
         imageName = finalThumbnail.split("/")[-1].split(".")[0]
         frameNum = int(imageName.replace("frame", ""))
 
