@@ -1,8 +1,9 @@
 # thumbnail_generator
 # Installation
 You need Python version 3 before you start the installation.
-The environment needed, is possible to install by running the command ```pip install -r requirements.txt```.
+The environment needed, is possible to install by running the command ```pip install -r requirements.txt``` in terminal.
 # Get started
+To run any code, first ```cd``` into the right directory with the files that are runnable: ```cd code/``` 
 The thumbnail generator is possible to run in terminal by running ```python create_thumbnail.py``` and giving its belonging parameters.
 
 To run a GUI instead of running the ```create_thumbnail.py``` file in terminal with parameters, it is possible to write the command ```python ats_interface.py``` and a GUI window will appear.
