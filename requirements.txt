@@ -1,7 +1,9 @@
 opencv-python
-image-quality
-dlib
-mtcnn
 numpy
 tensorflow
+cmake
 pillow
+dlib
+mtcnn
+image-quality
+
