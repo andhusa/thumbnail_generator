@@ -204,7 +204,7 @@ def main():
         processFile = True
         print("is file")
         name, ext = os.path.splitext(destination)
-        if ext != ".ts" and ext != ".mp4":
+        if ext != ".ts" and ext != ".mp4" and ext != ".mkv":
             raise Exception("The input file is not a video file")
     else:
         raise Exception("The input destination was neither file or directory")
@@ -235,7 +235,7 @@ def main():
     elif processFolder:
         for f in os.listdir(destination):
             name, ext = os.path.splitext(f)
-            if ext == ".ts" or ext == ".mp4":
+            if ext == ".ts" or ext == ".mp4" or ext == ".mkv":
                 create_thumbnail(destination + name + ext, downscaleOutput , downscaleOnProcessing, close_up_model, logo_detection_model, faceDetModel, runFaceDetection, runBlur, blur_model_name, svd_threshold, laplacian_threshold, runIQA, iqa_model_name, runLogoDetection, runCloseUpDetection, close_up_threshold, brisque_threshold, logo_threshold, cutStartSeconds, cutEndSeconds, totalFramesToExtract, fpsExtract, framerateExtract, annotationSecond, beforeAnnotationSecondsCut, afterAnnotationSecondsCut)
 
 
