@@ -306,7 +306,7 @@ def create_thumbnail(video_path, downscaleOutput, downscaleOnProcessing, close_u
             break
         if currentframe > stopFrame:
             break
-        if currentframe <= cutStartFrames:
+        if currentframe < cutStartFrames:
             currentframe += 1
             continue
         if currentframe % frame_skip == 0 and numFramesExtracted < totalFramesToExtract:
