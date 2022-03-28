@@ -41,7 +41,7 @@ def main():
     #Default values
     close_up_threshold = 0.75
     totalFramesToExtract = 50
-    faceDetModel = dlibStr
+    faceDetModel = dnnStr
     framerateExtract = None
     fpsExtract = None
     cutStartSeconds = 0
