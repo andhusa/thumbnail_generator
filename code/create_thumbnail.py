@@ -276,16 +276,7 @@ def create_thumbnail(video_path, downscaleOutput, downscaleOnProcessing, close_u
 
     if totalFrames < cutStartFrames + cutEndFrames:
         raise Exception("All the frames are cut out")
-    #try:
-        # creating a folder for frames
-        #if not os.path.exists(frames_folder):
-            #os.makedirs(frames_folder_outer)
-            #os.makedirs(frames_folder)
-            #print("created folder: " + frames_folder)
-
-    # if not created then raise error
-    #except OSError:
-    #    print ('Error: Couldnt create directory')
+    
 
     remainingFrames = totalFrames - (cutStartFrames + cutEndFrames)
     remainingSeconds = remainingFrames / fps
@@ -301,10 +292,7 @@ def create_thumbnail(video_path, downscaleOutput, downscaleOnProcessing, close_u
     frame_skip = (totalFrames-(cutStartFrames + cutEndFrames))//totalFramesToExtract
     numFramesExtracted = 0
     stopFrame = totalFrames-cutEndFrames
-    if os.path.isdir(frames_folder):
-        print("Folder exists!")
-    else:
-        print("Does not exist")
+    
     while(True):
         # reading from frame
         ret,frame = cam.read()
@@ -383,7 +371,7 @@ def create_thumbnail(video_path, downscaleOutput, downscaleOnProcessing, close_u
     if finalThumbnail != "":
         newName = ""
         if filename_output == "":
-            newName = video_filename.split(".")[0] + "_" + filenameAdditional +  ".jpg"
+            newName = video_filename.split(".")[0] + "_" + filename_additional +  ".jpg"
         else:
             newName = filename_output
             extension_added = len(newName.split(".")) == 2
