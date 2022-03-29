@@ -63,8 +63,8 @@ def generate():
 		print(runMLbased)
 		if os.system(runMLbased) != 0:
 			raise Exception('runMLbased did not work')
-		outputname = './thumbnail_output/' + name + '_thumbnail.jpg'
-		staticOutputname = './thumbnail_output/' + name + '_static_thumbnail.jpg'
+		outputname = '../results/' + name + '_thumbnail.jpg'
+		staticOutputname = '../results/' + name + '_static_thumbnail.jpg'
 
 		imgS = Image.open(staticOutputname)
 		imgS = imgS.resize((width,height), Image.ANTIALIAS)
