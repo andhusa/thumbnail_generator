@@ -292,18 +292,27 @@ def create_thumbnail(video_path, downscaleOutput, downscaleOnProcessing, close_u
     frame_skip = (totalFrames-(cutStartFrames + cutEndFrames))//totalFramesToExtract
     numFramesExtracted = 0
     stopFrame = totalFrames-cutEndFrames
-    
+    print("Frame_skip: " + str(frame_skip))
+    print("total frames to extract: " + str(totalFramesToExtract))
+    print("duration: " + str(duration))
+    print("total frames: " + str(totalFrames))
+    print("stopFrame: " + str(stopFrame))
+    print("fps: " + str(fps))
     while(True):
         # reading from frame
         ret,frame = cam.read()
         if not ret:
+            print(currentframe)
+            print("no ret")
             break
         if currentframe > stopFrame:
+            print("cur > stop")
             break
         if currentframe < cutStartFrames:
             currentframe += 1
             continue
         if currentframe % frame_skip == 0 and numFramesExtracted < totalFramesToExtract:
+            print(currentframe)
             # if video is still left continue creating images
             name = frames_folder + 'frame' + str(currentframe) + '.jpg'
             #name = 'frame' + str(currentframe) + '.jpg'
@@ -315,7 +324,6 @@ def create_thumbnail(video_path, downscaleOutput, downscaleOnProcessing, close_u
             numFramesExtracted += 1
 
         currentframe += 1
-
     priority_images = groupFrames(frames_folder, close_up_model, logo_detection_model, faceDetModel, runFaceDetection, runLogoDetection, runCloseUpDetection, close_up_threshold, logo_threshold)
     finalThumbnail = ""
 
