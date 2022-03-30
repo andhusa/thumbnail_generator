@@ -2,6 +2,22 @@
 # Installation
 You need Python version 3 before you start the installation.
 The environment needed, is possible to install by running the command ```pip install -r requirements.txt``` in terminal.
+
+
+The code was tested with the specified versions in Python 3.8.13:
+```
+cmake==3.22.3
+dlib==19.23.1
+image-quality==1.2.7
+mtcnn==0.1.1
+numpy==1.22.3
+opencv-python==4.5.5.64
+pillow==9.0.1
+scikit-image==0.18.3
+tensorflow==2.8.0
+```
+The image quality predictor in package ```image-quality==1.2.7``` is not compatible with ```scikit-image>=0.19```. An update in the ```image-quality``` package should make it not necessary to downgrade the ```scikit-image```.
+
 # Get started
 To run any code, first ```cd``` into the right directory with the files that are runnable: ```cd code/``` 
 The thumbnail generator is possible to run in terminal by running ```python create_thumbnail.py``` and giving its belonging parameters.
