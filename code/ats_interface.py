@@ -153,7 +153,7 @@ def change_blur_label(model):
 master = tk.Tk()
 master.winfo_toplevel().title("HOST-ATS Graphical User Interface")
 faceVar = StringVar(master)
-faceVar.set("dlib") # default value
+faceVar.set("dnn") # default value
 logoVar = StringVar(master)
 logoVar.set("Eliteserien2019")
 blurVar = StringVar(master)
