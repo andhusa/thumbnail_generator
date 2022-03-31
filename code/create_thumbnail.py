@@ -10,6 +10,8 @@ import shutil
 import imquality.brisque as brisque
 import dlib
 from mtcnn.mtcnn import MTCNN
+import time
+
 model_folder = "../data/models/"
 frames_folder_outer = "../results/temp"
 thumbnail_output = "../results/"
@@ -36,6 +38,7 @@ filename_additional = "thumbnail"
 #The probability score the image classifying model gives, is depending on which class it is basing the score on.
 #It could be switched
 close_up_model_inverted = False
+times = []
 
 def main():
     #Default values
@@ -70,23 +73,23 @@ def main():
 
     #Logo detection models
     logoGroup = parser.add_mutually_exclusive_group(required=False)
-    logoGroup.add_argument("-LEliteserien2019", action='store_true', help="Surma model used for logo detection, trained on Eliteserien 2019.")
+    logoGroup.add_argument("-LEliteserien2019", action='store_true', help="Surma model used for logo detection, trained on Eliteserien 2019. This model is default.")
     logoGroup.add_argument("-LSoccernet", action='store_true', help="Surma model used for logo detection, trained on Soccernet.")
     logoGroup.add_argument("-xl", "--xLogoDetection", default=True, action="store_false", help="Don't run logo detection.")
 
     #Close-up detection models
     closeupGroup = parser.add_mutually_exclusive_group(required=False)
-    closeupGroup.add_argument("-CSurma", action='store_true', help="Surma model used for close-up detection.")
+    closeupGroup.add_argument("-CSurma", action='store_true', help="Surma model used for close-up detection. This model is default.")
     closeupGroup.add_argument("-xc", "--xCloseupDetection", default=True, action="store_false", help="Don't run close-up detection.")
 
     #IQA models
     iqaGroup = parser.add_mutually_exclusive_group(required=False)
-    iqaGroup.add_argument("-IQAOcampo", action='store_true', help="Ocampo model used for image quality assessment.")
+    iqaGroup.add_argument("-IQAOcampo", action='store_true', help="Ocampo model used for image quality assessment. This model is default.")
     iqaGroup.add_argument("-xi", "--xIQA", default=True, action="store_false", help="Don't run image quality prediction.")
 
     #Blur detection models
     blurGroup = parser.add_mutually_exclusive_group(required=False)
-    blurGroup.add_argument("-BSVD", action='store_true', help="SVD method used for blur detection.")
+    blurGroup.add_argument("-BSVD", action='store_true', help="SVD method used for blur detection. This method is default.")
     blurGroup.add_argument("-BLaplacian", action='store_true', help="Laplacian method used for blur detection.")
     blurGroup.add_argument("-xb", "--xBlurDetection", default=True, action="store_false", help="Don't run blur detection.")
 
@@ -96,7 +99,7 @@ def main():
     faceGroup.add_argument("-dlib", action='store_true', help="Dlib detection model is slow, but presice.")
     faceGroup.add_argument("-haar", action='store_true', help="Haar detection model is fast, but unprecise.")
     faceGroup.add_argument("-mtcnn", action='store_true', help="MTCNN detection model is slow, but precise.")
-    faceGroup.add_argument("-dnn", action='store_true', help="DNN detection model is fast and precise.")
+    faceGroup.add_argument("-dnn", action='store_true', help="DNN detection model is fast and precise. This model is default")
     faceGroup.add_argument("-xf", "--xFaceDetection", default=True, action="store_false", help="Don't run the face detection.")
 
     #Flags fixing default values
@@ -239,8 +242,10 @@ def main():
         for f in os.listdir(destination):
             name, ext = os.path.splitext(f)
             if ext == ".ts" or ext == ".mp4" or ext == ".mkv":
+                start = time.time()
                 create_thumbnail(destination + name + ext, downscaleOutput , downscaleOnProcessing, close_up_model, logo_detection_model, faceDetModel, runFaceDetection, runBlur, blur_model_name, svd_threshold, laplacian_threshold, runIQA, iqa_model_name, runLogoDetection, runCloseUpDetection, close_up_threshold, brisque_threshold, logo_threshold, cutStartSeconds, cutEndSeconds, totalFramesToExtract, fpsExtract, framerateExtract, annotationSecond, beforeAnnotationSecondsCut, afterAnnotationSecondsCut, filename_output)
-
+                end = time.time()
+                times.append(end-start)
 
 
 
@@ -623,3 +628,5 @@ def above_zero_int(x):
 
 if __name__ == "__main__":
     main()
+    print(times)
+    print(sum(times)/len(times))
